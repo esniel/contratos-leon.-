@@ -20,6 +20,16 @@
 .live-load{height:8px;border:1px solid #c28b22;background:#09111b;border-radius:99px;overflow:hidden;box-shadow:0 0 18px #f1b52d30}.live-load span{display:block;height:100%;width:0;background:linear-gradient(90deg,#e99d18,#ffe589,#e99d18);transition:width .18s ease}
 .loadtext{font-size:10px;letter-spacing:.13em;color:#d9c48f;margin:8px 0}.premium-splash .enterapp{display:none;margin-top:4px}
 .scanbar{height:2px;background:linear-gradient(90deg,transparent,#44e47a,transparent);animation:scan 2.2s linear infinite}@keyframes scan{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+.leon-voice-btn{position:fixed;right:82px;bottom:78px;width:52px;height:52px;border-radius:50%;
+border:1px solid #31527a;background:#101a29;color:#75b8ff;font-size:21px;z-index:55;
+box-shadow:0 10px 30px #0007}.leon-voice-btn.on{border-color:#35c86a;color:#58ee86;box-shadow:0 0 28px #35c86a33}
+.leon-mic-btn{position:fixed;right:142px;bottom:78px;width:52px;height:52px;border-radius:50%;
+border:1px solid #6a3e7c;background:#17101f;color:#d998ff;font-size:21px;z-index:55;
+box-shadow:0 10px 30px #0007}.leon-mic-btn.listening{border-color:#ff4f88;color:#ff7aa4;animation:micPulse .8s infinite alternate}
+@keyframes micPulse{to{transform:scale(1.07);box-shadow:0 0 28px #ff4f8844}}
+.voice-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:145px;background:#0d141c;border:1px solid #25394f;
+color:#dbe7f5;padding:9px 12px;border-radius:999px;font-size:11px;z-index:70;display:none}.voice-toast.show{display:block}
 </style>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -249,5 +259,77 @@ document.addEventListener('DOMContentLoaded',()=>{syncOptionsLab();setInterval((
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
 }
+</script>
+
+<button id="leonMicBtn" class="leon-mic-btn" title="Hablar con León AI">🎤</button>
+<button id="leonVoiceBtn" class="leon-voice-btn on" title="Voz de León AI">🔊</button>
+<div id="voiceToast" class="voice-toast"></div>
+
+<script>
+(function(){
+  let voiceOn=true;
+  const toast=(t)=>{
+    const el=document.getElementById('voiceToast');
+    if(!el)return; el.textContent=t;el.classList.add('show');
+    setTimeout(()=>el.classList.remove('show'),1800);
+  };
+  function speak(text){
+    if(!voiceOn || !('speechSynthesis' in window) || !text) return;
+    try{
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang='es-US';u.rate=.96;u.pitch=.95;u.volume=1;
+      const voices=speechSynthesis.getVoices();
+      const preferred=voices.find(v=>/es[-_](US|MX|ES)/i.test(v.lang))||voices.find(v=>/^es/i.test(v.lang));
+      if(preferred)u.voice=preferred;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  window.LeonSpeak=speak;
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    const vb=document.getElementById('leonVoiceBtn');
+    const mb=document.getElementById('leonMicBtn');
+    if(vb)vb.onclick=()=>{
+      voiceOn=!voiceOn;vb.classList.toggle('on',voiceOn);vb.textContent=voiceOn?'🔊':'🔇';
+      toast(voiceOn?'Voz de León activada':'Voz de León desactivada');
+      if(voiceOn)speak('Voz de León activada.');
+    };
+
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(mb){
+      if(!SR){
+        mb.onclick=()=>toast('El micrófono por voz no está disponible en este navegador.');
+      }else{
+        const rec=new SR();rec.lang='es-US';rec.interimResults=false;rec.maxAlternatives=1;
+        mb.onclick=()=>{try{rec.start();mb.classList.add('listening');toast('León te está escuchando…')}catch(e){}};
+        rec.onresult=(e)=>{
+          const text=e.results[0][0].transcript;
+          mb.classList.remove('listening');
+          const input=document.getElementById('aiInput');
+          if(input){
+            input.value=text;
+            const send=document.getElementById('aiSend');
+            if(send)send.click();
+          } else toast('Escuché: '+text);
+        };
+        rec.onerror=()=>{mb.classList.remove('listening');toast('No pude escuchar bien. Intenta otra vez.')};
+        rec.onend=()=>mb.classList.remove('listening');
+      }
+    }
+
+    // Speak new León AI bot messages automatically.
+    const box=document.getElementById('aiMsgs')||document.getElementById('aiMessages');
+    if(box && 'MutationObserver' in window){
+      new MutationObserver((muts)=>{
+        muts.forEach(m=>m.addedNodes.forEach(n=>{
+          if(n.nodeType===1 && (n.classList.contains('bot') || n.classList.contains('ai-msg'))){
+            if(n.classList.contains('bot') || n.classList.contains('bot')) speak(n.textContent.trim());
+          }
+        }));
+      }).observe(box,{childList:true,subtree:false});
+    }
+  });
+})();
 </script>
 </body></html>
