@@ -1,9 +1,22 @@
-# Contratos León
+# Contratos León v31 — Render simplificado
 
-Sitio listo para GitHub Pages.
+## GitHub Pages
+La aplicación web sigue en `index.html` y funciona desde la rama `principal`.
 
-Sube todos estos archivos a la raíz del repositorio y deja GitHub Pages apuntando a:
-- Rama: `principal`
-- Carpeta: `/(root)`
+## Render Web Service
+Configura:
+- Language: Python
+- Branch: principal
+- Root Directory: vacío
+- Build Command: `pip install -r requirements.txt`
+- Start Command: `uvicorn leon_api:app --host 0.0.0.0 --port $PORT`
+- Instance: Free (para pruebas)
+- Environment Variable:
+  - `ALPHAVANTAGE_API_KEY` = tu clave privada
 
-La versión local contiene datos demostrativos. Para cotizaciones y noticias reales 24/7 hay que conectar un backend y proveedor de datos reales.
+No publiques la clave en GitHub.
+
+Cuando Render termine, copia la URL HTTPS del servicio y colócala en `config.js`:
+`window.CONTRATOS_LEON_API = "https://TU-SERVICIO.onrender.com";`
+
+Luego vuelve a subir `config.js` a GitHub y GitHub Pages quedará conectado con el backend real.

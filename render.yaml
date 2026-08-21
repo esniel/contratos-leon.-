@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: contratos-leon-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
