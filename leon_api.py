@@ -9,6 +9,21 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False,
 
 AV_KEY=os.getenv("ALPHAVANTAGE_API_KEY","").strip()
 TD_KEY=os.getenv("TWELVE_DATA_API_KEY","").strip()
+def td(endpoint, params=None):
+    if not TD_KEY:
+        raise HTTPException(503, "TWELVE_DATA_API_KEY no configurada")
+    p = dict(params or {})
+    p["apikey"] = TD_KEY
+    r = requests.get(
+        f"https://api.twelvedata.com/{endpoint}",
+        params=p,
+        timeout=15
+    )
+    r.raise_for_status()
+    d = r.json()
+    if d.get("status") == "error":
+        raise HTTPException(502, d.get("message", "Twelve Data error"))
+    return d
 def av(params):
     if not AV_KEY:
         raise HTTPException(503,"ALPHAVANTAGE_API_KEY no configurada")
