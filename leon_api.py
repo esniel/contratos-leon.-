@@ -8,7 +8,7 @@ app = FastAPI(title="Contratos León Real Data API", version="36.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["GET"], allow_headers=["*"])
 
 AV_KEY=os.getenv("ALPHAVANTAGE_API_KEY","").strip()
-
+TD_KEY=os.getenv("TWELVE_DATA_API_KEY","").strip()
 def av(params):
     if not AV_KEY:
         raise HTTPException(503,"ALPHAVANTAGE_API_KEY no configurada")
