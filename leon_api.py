@@ -54,9 +54,39 @@ def search(q:str=Query(...,min_length=1,max_length=32)):
 
 @app.get("/api/quote")
 def quote(symbol:str):
-    d=av({"function":"GLOBAL_QUOTE","symbol":symbol.upper().strip()}).get("Global Quote",{})
-    if not d: raise HTTPException(404,"Sin cotización")
-    return {"symbol":symbol.upper().strip(),"price":float(d.get("05. price",0) or 0),"change_pct":float(str(d.get("10. change percent","0")).replace("%","") or 0)}
+    symbol=symbol.upper().strip()
+
+    try:
+        d=td("quote", {"symbol":symbol})
+        price=float(d.get("close") or d.get("price") or 0)
+        pct=float(d.get("percent_change") or 0)
+
+        if price > 0:
+            return {
+                "symbol":symbol,
+                "price":price,
+                "change_pct":pct,
+                "provider":"Twelve Data"
+            }
+    except Exception:
+        pass
+
+    d=av({
+        "function":"GLOBAL_QUOTE",
+        "symbol":symbol
+    }).get("Global Quote",{})
+
+    if not d:
+        raise HTTPException(404,"Sin cotización")
+
+    return {
+        "symbol":symbol,
+        "price":float(d.get("05. price",0) or 0),
+        "change_pct":float(
+            str(d.get("10. change percent","0")).replace("%","") or 0
+        ),
+        "provider":"Alpha Vantage"
+    }
 
 def series(symbol, intraday=True):
     if intraday:
