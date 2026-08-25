@@ -3,6 +3,7 @@ import os, math, statistics, requests, time
 from datetime import date, datetime, timedelta
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from zoneinfo import ZoneInfo
 
 app = FastAPI(title="Contratos León Real Data API", version="47.0")
@@ -66,10 +67,10 @@ def av(params):
             _AV_USAGE.update({"used":AV_DAILY_LIMIT,"limit_hit":True})
         raise HTTPException(429,msg)
     return d
-
 @app.get("/")
 def home():
-    return {"ok":True,"service":"Contratos León API","version":"47.0","docs":"/docs"}
+    return FileResponse("index.html")
+
 
 @app.get("/health")
 @app.get("/api/health")
