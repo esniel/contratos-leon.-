@@ -1,1 +1,1 @@
-const CACHE='contratos-leon-v42';self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+const CACHE='contratos-leon-v45-m7';self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));

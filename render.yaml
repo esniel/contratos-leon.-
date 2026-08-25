@@ -1,6 +1,12 @@
 services:
   - type: web
-    name: contratos-leon-api
+    name: contratos-leon
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/health
+    healthCheckPath: /health
+    envVars:
+      - key: ALPHAVANTAGE_API_KEY
+        sync: false
+      - key: TWELVE_DATA_API_KEY
+        sync: false

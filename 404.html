@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#05070a"><title>Contratos León</title>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#05070a"><title>LEONIX — AI Market Intelligence</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#05080c;color:#f7f8fa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}:root{--gold:#e1ad3f;--green:#4ce17c;--red:#ff626e;--line:#222b35;--muted:#7c8998}button,input{font:inherit}
-.top{position:sticky;top:0;display:flex;gap:10px;align-items:center;padding:12px;background:#05080ce8;border-bottom:1px solid #1e2630;z-index:20}.lion{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,#f6d374,#b87c19 58%,#634007);font-size:23px}.brand b{display:block;font-size:12px}.brand span{color:var(--gold);font-weight:950}.grow{flex:1}.status{font-size:9px;color:var(--green);border:1px solid #184a2c;padding:6px 8px;border-radius:999px}
+.top{position:sticky;top:0;display:flex;gap:10px;align-items:center;padding:12px;background:#05080ce8;border-bottom:1px solid #1e2630;z-index:20}.lion{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:#090d12;border:1px solid #5b4519;overflow:hidden}.lion img{width:100%;height:100%;object-fit:cover;object-position:50% 20%}.brand b{display:block;font-size:16px;letter-spacing:.14em}.brand span{color:var(--gold);font-weight:800;font-size:8px;letter-spacing:.12em}.ceo{font-size:8px;color:#9ca7b2;line-height:1.25;margin-left:4px}.ceo strong{color:#e5c66b;font-weight:800}.grow{flex:1}.status{font-size:9px;color:var(--green);border:1px solid #184a2c;padding:6px 8px;border-radius:999px}
 .page{max-width:1450px;margin:auto;padding:12px 10px 88px}.search{display:flex;gap:7px}.search input{flex:1;background:#0c1218;border:1px solid #26323d;color:white;border-radius:11px;padding:11px}.search button{border:0;border-radius:10px;background:linear-gradient(135deg,#e1ad3f,#805c16);font-weight:900;padding:0 14px}.section{display:flex;justify-content:space-between;align-items:end;margin:18px 2px 8px}.section h2{margin:0;font-size:18px}.muted{color:var(--muted);font-size:10px}.ranges{display:flex;gap:6px;overflow:auto}.ranges button{min-width:48px;border:1px solid #293744;background:#0e161e;color:#96a3b2;border-radius:8px;padding:7px}.ranges .active{background:#4a3711;border-color:#80611c;color:#ffe18b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.card{background:linear-gradient(180deg,#0d1218,#090d12);border:1px solid var(--line);border-radius:15px;padding:12px}.goldcard{border-color:#44371e;background:linear-gradient(135deg,#17140d,#0b1015)}.eyebrow{font-size:9px;color:var(--gold);font-weight:900;letter-spacing:.12em}.h1{font-size:26px;font-weight:950;margin:5px 0}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.metric{background:#080d12;border:1px solid #1e2731;border-radius:10px;padding:9px}.metric small{display:block;color:#738297;font-size:8px}.metric b{display:block;margin-top:4px}.green{color:var(--green)}.gold{color:var(--gold)}.tablewrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:720px}.table th,.table td{padding:9px 7px;border-bottom:1px solid #18212a;text-align:left;font-size:11px}.table th{font-size:8px;color:#708095}.notice{margin-top:9px;border-left:3px solid var(--gold);background:#12130f;padding:9px;border-radius:8px;color:#c7d0d9;font-size:10px;line-height:1.5}.bottom{position:fixed;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,1fr);background:#070a0eea;border-top:1px solid #202832;padding:7px 6px calc(7px + env(safe-area-inset-bottom))}.bottom button{border:0;background:transparent;color:#7f8a98;font-size:9px}.bottom span{display:block;font-size:18px}.bottom .active{color:var(--gold)}
 @media(max-width:800px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.status{display:none}}
 
@@ -26,26 +26,92 @@
 .paperstats{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:10px}.pstat{background:#080d12;border:1px solid #1d2630;border-radius:10px;padding:8px}.pstat small{display:block;color:#738297;font-size:8px}.pstat b{display:block;margin-top:4px;font-size:14px}
 .paperlog{margin-top:10px;max-height:190px;overflow:auto;border-top:1px solid #1c2530}.paperrow{display:grid;grid-template-columns:80px 70px 1fr 90px 90px;gap:8px;padding:8px 0;border-bottom:1px solid #17212a;font-size:10px}
 @media(max-width:800px){.papercontrols{grid-template-columns:repeat(2,1fr)}.paperstats{grid-template-columns:repeat(2,1fr)}.paperrow{grid-template-columns:65px 60px 1fr 75px 75px}}
+
+.modebar{display:flex;gap:8px;align-items:center;margin:10px 0 2px}
+.modebar button{flex:1;border:1px solid #2a3540;background:#0d141b;color:#94a0ad;border-radius:10px;padding:10px;font-weight:900}
+.modebar button.active{border-color:#80611d;background:linear-gradient(135deg,#49350e,#2b210b);color:#ffe08a}
+.modehint{font-size:9px;color:#83909d;margin:6px 2px 12px;line-height:1.5}
+.easy-only{display:none}
+body.easy-mode .pro-only{display:none!important}
+body.easy-mode .easy-only{display:block!important}
+.easydecision{border:1px solid #31404c;background:#0a1117;border-radius:14px;padding:12px;margin-top:10px}
+.easydecision .big{font-size:30px;font-weight:950;margin:6px 0}
+.easygrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+@media(max-width:800px){.easydecision .big{font-size:24px}}
+
+.socialwrap{display:grid;grid-template-columns:280px 1fr;gap:10px}
+.friendside,.chatmain{background:#081017;border:1px solid #202c36;border-radius:14px;overflow:hidden}
+.friendhead,.chathead{padding:10px 12px;border-bottom:1px solid #1c2731;display:flex;align-items:center;gap:8px}
+.friendsearch{padding:9px}.friendsearch input{width:100%;background:#0b141b;border:1px solid #2a3844;color:#fff;border-radius:9px;padding:9px}
+.frienditem{display:flex;align-items:center;gap:9px;padding:10px 12px;border-top:1px solid #17212a;cursor:pointer}
+.frienditem.active{background:#102018}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#20180a;border:1px solid #7b5d19;color:#e9c65e;font-weight:900}
+.presence{width:8px;height:8px;border-radius:50%;background:#42df79}
+.chatbody{height:330px;overflow:auto;padding:12px;background:linear-gradient(180deg,#071017,#050a0f)}
+.msg{max-width:78%;margin:7px 0;padding:9px 10px;border-radius:12px;font-size:10px;line-height:1.45}.msg.me{margin-left:auto;background:#153623;border:1px solid #245a38}.msg.them{background:#101820;border:1px solid #25313c}.tradecard{margin-top:7px;border:1px solid #4d3c18;background:#181308;border-radius:9px;padding:8px}
+.chatcomposer{display:grid;grid-template-columns:1fr auto auto;gap:7px;padding:10px;border-top:1px solid #1b2730}.chatcomposer input{background:#0b141b;border:1px solid #293743;color:#fff;border-radius:9px;padding:9px}.chatcomposer button,.addfriend{border:1px solid #3b4a56;background:#111b23;color:#dce4eb;border-radius:9px;padding:8px 10px}.addfriend{border-color:#6e551b;background:#2c220d;color:#f0cb68}
+.request{padding:9px 12px;border-top:1px solid #17212a;background:#0d151b}.request button{margin-left:6px;border:1px solid #2c4a36;background:#102719;color:#54e888;border-radius:7px;padding:5px 7px}
+@media(max-width:800px){.socialwrap{grid-template-columns:1fr}.chatbody{height:290px}}
+
+.m7banner{margin:12px 0;border:1px solid #4d3c18;background:linear-gradient(135deg,#17140d,#081019);border-radius:15px;padding:12px}.m7head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.m7head h2{margin:0;font-size:18px}.m7badge{font-size:9px;border:1px solid #70571d;background:#2e230c;color:#f0cb6a;border-radius:999px;padding:5px 8px}.m7grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-top:10px}.m7card{border:1px solid #24313c;background:#0a1117;border-radius:11px;padding:9px;cursor:pointer}.m7card.active{border-color:#9b741f;box-shadow:0 0 0 1px #5c4517 inset}.m7sym{font-weight:950;font-size:14px}.m7price{font-size:15px;margin-top:5px}.m7meta{display:flex;justify-content:space-between;gap:5px;margin-top:6px;font-size:9px}.m7best{margin-top:10px;display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:7px}.m7refresh{border:1px solid #73591c;background:#2b210b;color:#f1cc67;border-radius:9px;padding:8px 10px;font-weight:900}.red{color:var(--red)}
+.quota{margin:10px 0;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid #4b3b1c;background:linear-gradient(135deg,#17140d,#0a1117);border-radius:13px;padding:10px 12px}.quotaicon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#2b210b;color:#f0cb6a;font-size:18px}.quotamain b{font-size:12px}.quotamain small{display:block;color:#8c99a8;font-size:8px;margin-top:2px}.quotabar{height:6px;background:#17212a;border-radius:999px;overflow:hidden;margin-top:7px}.quotabar i{display:block;height:100%;background:linear-gradient(90deg,#4ce17c,#e1ad3f);width:100%;transition:.35s}.quotanums{text-align:right}.quotanums b{display:block;font-size:18px;color:#f0cb6a}.quotanums small{font-size:8px;color:#8c99a8}.quota.danger{border-color:#603039;background:linear-gradient(135deg,#1a0d10,#0a1117)}.quota.danger .quotabar i{background:#ff626e}.quota.danger .quotanums b{color:#ff626e}
+@media(max-width:900px){.m7grid{grid-template-columns:repeat(2,1fr)}.m7best{grid-template-columns:repeat(2,1fr)}.quota{grid-template-columns:auto 1fr}.quotanums{grid-column:1/-1;text-align:left;display:flex;gap:6px;align-items:baseline}.quotanums b{font-size:14px}}
+.marketclock{margin:8px 0 12px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid #244a35;background:linear-gradient(135deg,#0b1d14,#081019);border-radius:13px;padding:10px 12px}.marketclock.closed{border-color:#4b3b1c;background:linear-gradient(135deg,#17140d,#081019)}.marketicon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#10291c;color:#64ed91;font-size:18px}.marketclock.closed .marketicon{background:#2b210b;color:#f0cb6a}.marketmain b{font-size:12px}.marketmain small{display:block;color:#8c99a8;font-size:8px;margin-top:2px}.marketnums{text-align:right}.marketnums b{display:block;font-size:18px;color:#64ed91;font-variant-numeric:tabular-nums}.marketclock.closed .marketnums b{color:#f0cb6a}.marketnums small{font-size:8px;color:#8c99a8}@media(max-width:900px){.marketclock{grid-template-columns:auto 1fr}.marketnums{grid-column:1/-1;text-align:left}.marketnums b{font-size:16px}}
 </style>
 <script>window.CONTRATOS_LEON_API="https://contratos-leon.onrender.com";</script></head>
 <body>
-<header class="top"><div class="lion">🦁</div><div class="brand"><b>CONTRATOS</b><span>LEÓN</span></div><div class="grow"></div><div class="status" id="backend">CONECTANDO</div></header>
+<header class="top"><div class="lion"><img src="leonix-brand.png" alt="LEONIX"></div><div class="brand"><b>LEONIX</b><span>AI MARKET INTELLIGENCE</span></div><div class="ceo"><strong>Edniel Esay León Jiménez</strong><br>Chief Executive Officer</div><div class="grow"></div><div class="status" id="backend">CONECTANDO</div></header>
 <main class="page">
-<div class="search"><input id="symbol" value="NVDA" placeholder="Buscar acción o ETF…"><button id="scan">ESCANEAR</button></div>
+<div class="search"><input id="symbol" value="NVDA" placeholder="AAPL, MSFT, GOOGL, AMZN, NVDA, META o TSLA"><button id="scan">ANÁLISIS COMPLETO</button></div>
+<div class="modebar">
+  <button id="easyModeBtn">🟢 MODO FÁCIL</button>
+  <button id="proModeBtn" class="active">🦁 MODO PROFESIONAL</button>
+</div>
+<div class="modehint" id="modeHint">Profesional: muestra GEX, Order Flow, Greeks, indicadores, contratos y análisis completo.</div>
+<section class="quota" id="alphaQuota"><div class="quotaicon">⚡</div><div class="quotamain"><b>ALPHA VANTAGE · 25 CONSULTAS/DÍA</b><small id="alphaQuotaSub">Respaldo y opciones · comprobando contador…</small><div class="quotabar"><i id="alphaQuotaBar"></i></div></div><div class="quotanums"><b id="alphaRemaining">25 / 25</b><small id="alphaReset">Reinicio diario</small></div></section>
+<section class="marketclock closed" id="marketClock"><div class="marketicon">🕘</div><div class="marketmain"><b id="marketClockTitle">APERTURA DEL MERCADO · NYSE/NASDAQ</b><small id="marketClockSub">Calculando próxima sesión · 9:30 AM ET</small></div><div class="marketnums"><b id="marketCountdown">--:--:--</b><small id="marketNext">Hora de Nueva York</small></div></section>
+
+
+<section class="m7banner">
+ <div class="m7head"><h2>🦁 Magnificent 7 · Modo Prueba</h2><span class="m7badge">UNIVERSO FIJO: 7 ACCIONES</span><div class="grow"></div><button class="m7refresh" id="m7Refresh">↻ ACTUALIZAR 7</button></div>
+ <div class="muted">AAPL · MSFT · GOOGL · AMZN · NVDA · META · TSLA. LEONIX compara estas siete primero; opciones y contratos siguen incorporados para la acción seleccionada.</div>
+ <div class="m7grid" id="m7Grid"></div>
+ <div class="m7best">
+   <div class="metric"><small>MEJOR OPORTUNIDAD ACTUAL</small><b class="gold" id="m7Best">Analizando…</b></div>
+   <div class="metric"><small>PRECIO</small><b id="m7BestPrice">—</b></div>
+   <div class="metric"><small>LEONIX MARKET SCORE</small><b id="m7BestScore">—</b></div>
+   <div class="metric"><small>ESTADO</small><b id="m7BestSignal">—</b></div>
+ </div>
+ <div class="notice" id="m7Note">Esta clasificación es para priorizar qué acción estudiar. Después, LEONIX analiza rangos, gráfico y contratos de la seleccionada. Si faltan datos de opciones, no inventa un contrato.</div>
+</section>
+
+<section class="easy-only easydecision">
+  <div class="eyebrow">LEONIX · MODO FÁCIL</div>
+  <div class="big" id="easySignal">Analizando…</div>
+  <div class="easygrid">
+    <div class="metric"><small>ACCIÓN</small><b id="easyTicker">—</b></div>
+    <div class="metric"><small>DIRECCIÓN</small><b id="easyDir">—</b></div>
+    <div class="metric"><small>ENTRADA</small><b id="easyEntry">—</b></div>
+    <div class="metric"><small>STOP</small><b class="red" id="easyStop">—</b></div>
+    <div class="metric"><small>OBJETIVO</small><b class="green" id="easyTarget">—</b></div>
+    <div class="metric"><small>LEONIX SCORE</small><b class="gold" id="easyScore">—</b></div>
+  </div>
+  <div class="notice" id="easyWhy">Aquí LEONIX te explica en palabras simples por qué operar, esperar o descartar.</div>
+</section>
+
 
 <div class="section"><h2>Rangos</h2><span class="muted">1 minuto → 1 semana</span></div><div class="ranges" id="ranges"></div>
 
 <div class="grid">
-<section class="card goldcard"><div class="eyebrow">MEJOR RANGO AHORA</div><div class="h1" id="bestRange">Analizando…</div><div class="metrics"><div class="metric"><small>WIN RATE HIST.</small><b class="green" id="rangeWin">—</b></div><div class="metric"><small>RETORNO MEDIO</small><b id="rangeRet">—</b></div><div class="metric"><small>RANGE SCORE</small><b class="gold" id="rangeScore">—</b></div><div class="metric"><small>PRECIO ACCIÓN</small><b id="spot">—</b></div></div><div class="notice" id="rangeNote">León compara cada horizonte por separado y busca cuál tiene mejor evidencia.</div></section>
+<section class="card goldcard"><div class="eyebrow">MEJOR RANGO AHORA</div><div class="h1" id="bestRange">Analizando…</div><div class="metrics"><div class="metric"><small>WIN RATE HIST.</small><b class="green" id="rangeWin">—</b></div><div class="metric"><small>RETORNO MEDIO</small><b id="rangeRet">—</b></div><div class="metric"><small>RANGE SCORE</small><b class="gold" id="rangeScore">—</b></div><div class="metric"><small>PRECIO ACCIÓN</small><b id="spot">—</b></div></div><div class="notice" id="rangeNote">LEONIX compara cada horizonte por separado y busca cuál tiene mejor evidencia.</div></section>
 
-<section class="card goldcard"><div class="eyebrow">♛ MEJOR CONTRATO LEÓN</div><div class="h1" id="bestContract">Esperando cadena…</div><div class="metrics"><div class="metric"><small>TIPO</small><b id="direction">—</b></div><div class="metric"><small>STRIKE</small><b id="strike">—</b></div><div class="metric"><small>VENCE</small><b id="exp">—</b></div><div class="metric"><small>COSTO 1</small><b id="cost">—</b></div><div class="metric"><small>LEÓN SCORE</small><b class="gold" id="contractScore">—</b></div><div class="metric"><small>OI</small><b id="oi">—</b></div><div class="metric"><small>IV</small><b id="iv">—</b></div><div class="metric"><small>DELTA / THETA</small><b id="greeks">—</b></div></div><div class="notice" id="optionNote">Se requiere acceso a opciones en tiempo real del proveedor.</div></section>
+<section class="card goldcard"><div class="eyebrow">♛ MEJOR CONTRATO LEONIX</div><div class="h1" id="bestContract">Esperando cadena…</div><div class="metrics"><div class="metric"><small>TIPO</small><b id="direction">—</b></div><div class="metric"><small>STRIKE</small><b id="strike">—</b></div><div class="metric"><small>VENCE</small><b id="exp">—</b></div><div class="metric"><small>COSTO 1</small><b id="cost">—</b></div><div class="metric"><small>LEONIX SCORE</small><b class="gold" id="contractScore">—</b></div><div class="metric"><small>OI</small><b id="oi">—</b></div><div class="metric"><small>IV</small><b id="iv">—</b></div><div class="metric"><small>DELTA / THETA</small><b id="greeks">—</b></div></div><div class="notice" id="optionNote">Se requiere acceso a opciones en tiempo real del proveedor.</div></section>
 </div>
 
 
 
-<div class="section"><h2>Gráficas León</h2><span class="autolive">● AUTOMÁTICO</span></div>
+<div class="section"><h2>Gráficas LEONIX</h2><span class="autolive">● AUTOMÁTICO</span></div>
 <section class="card">
-  <div class="eyebrow">GRÁFICAS LEÓN · TRADING VIEW</div>
+  <div class="eyebrow">LEONIX CHARTS · TRADING VIEW</div>
   <div class="charttools" id="chartTF">
     <button data-ctf="1m">1m</button><button data-ctf="5m" class="active">5m</button>
     <button data-ctf="15m">15m</button><button data-ctf="30m">30m</button>
@@ -79,7 +145,7 @@
   <div class="papercontrols">
     <div><label>SALDO INICIAL</label><input id="paperStart" type="number" min="100" step="100" value="10000"></div>
     <div><label>MONTO POR OPERACIÓN</label><input id="paperAmount" type="number" min="1" step="1" value="500"></div>
-    <div><label>ASIGNACIÓN</label><select id="paperMode"><option value="manual">Manual</option><option value="auto">Automática León</option></select></div>
+    <div><label>ASIGNACIÓN</label><select id="paperMode"><option value="manual">Manual</option><option value="auto">Automática LEONIX</option></select></div>
     <div><label>% AUTO</label><select id="paperPct"><option value="2">2%</option><option value="5">5%</option><option value="10" selected>10%</option><option value="20">20%</option></select></div>
     <div><label>DIRECCIÓN</label><select id="paperSide"><option value="long">LONG / CALL</option><option value="short">SHORT / PUT</option></select></div>
   </div>
@@ -97,17 +163,17 @@
     <div class="pstat"><small>P/L REALIZADO</small><b id="paperRealized">$0.00</b></div>
     <div class="pstat"><small>RETORNO</small><b id="paperReturn">0.00%</b></div>
   </div>
-  <div class="notice" id="paperStatus">Saldo de práctica: $10,000. Puedes escoger el monto o dejar que León asigne un porcentaje automáticamente.</div>
+  <div class="notice" id="paperStatus">Saldo de práctica: $10,000. Puedes escoger el monto o dejar que LEONIX asigne un porcentaje automáticamente.</div>
   <div class="paperlog" id="paperLog"></div>
 </section>
 
-<div class="section"><h2>León Score unificado</h2><span class="muted">Opciones + rango + GEX + flujo + liquidez</span></div>
+<div class="section"><h2>LEONIX Score unificado</h2><span class="muted">Opciones + rango + GEX + flujo + liquidez</span></div>
 <div class="grid">
   <section class="card goldcard">
     <div class="eyebrow">♛ MEJOR OPERACIÓN LEÓN</div>
     <div class="h1" id="fullBest">Esperando análisis…</div>
     <div class="metrics">
-      <div class="metric"><small>LEÓN SCORE</small><b class="gold" id="fullScore">—</b></div>
+      <div class="metric"><small>LEONIX SCORE</small><b class="gold" id="fullScore">—</b></div>
       <div class="metric"><small>ESTADO</small><b id="fullGrade">—</b></div>
       <div class="metric"><small>RANGO</small><b id="fullRange">—</b></div>
       <div class="metric"><small>DIRECCIÓN</small><b id="fullDirection">—</b></div>
@@ -116,7 +182,7 @@
       <div class="metric"><small>VENCE</small><b id="fullExp">—</b></div>
       <div class="metric"><small>BREAK-EVEN</small><b id="fullBE">—</b></div>
     </div>
-    <div class="notice" id="fullExplain">León combina todas las capas y explica por qué un contrato queda primero.</div>
+    <div class="notice" id="fullExplain">LEONIX combina todas las capas y explica por qué un contrato queda primero.</div>
   </section>
   <section class="card">
     <div class="eyebrow">COMPONENTES DEL SCORE</div>
@@ -133,30 +199,70 @@
   </section>
 </div>
 
-<div class="section"><h2>Selección León</h2><span class="muted">mejor · conservadora · agresiva</span></div>
+<div class="section"><h2>Selección LEONIX</h2><span class="muted">mejor · conservadora · agresiva</span></div>
 <div class="rank">
   <div class="card"><div class="eyebrow">MEJOR</div><b id="pickBest">—</b><div class="muted" id="pickBestSub">—</div></div>
   <div class="card"><div class="eyebrow">CONSERVADORA</div><b id="pickCons">—</b><div class="muted" id="pickConsSub">—</div></div>
   <div class="card"><div class="eyebrow">AGRESIVA</div><b id="pickAgg">—</b><div class="muted" id="pickAggSub">—</div></div>
 </div>
-<div class="section"><h2>Comparación de rangos</h2><span class="muted">León selecciona el mejor</span></div><div class="card tablewrap"><table class="table"><thead><tr><th>RANGO</th><th>WIN RATE</th><th>RETORNO MEDIO</th><th>SCORE</th><th>ESTADO</th></tr></thead><tbody id="rangeRows"></tbody></table></div>
+<div class="pro-only"><div class="section"><h2>Comparación de rangos</h2><span class="muted">LEONIX selecciona el mejor</span></div><div class="card tablewrap"><table class="table"><thead><tr><th>RANGO</th><th>WIN RATE</th><th>RETORNO MEDIO</th><th>SCORE</th><th>ESTADO</th></tr></thead><tbody id="rangeRows"></tbody></table></div>
 
-<div class="section"><h2>Top contratos</h2><span class="muted">liquidez + spread + Greeks</span></div><div class="card tablewrap"><table class="table"><thead><tr><th>#</th><th>TIPO</th><th>STRIKE</th><th>VENCE</th><th>BID</th><th>ASK</th><th>COSTO</th><th>OI</th><th>VOL</th><th>IV</th><th>DELTA</th><th>THETA</th><th>SCORE</th></tr></thead><tbody id="optionRows"><tr><td colspan="13">Esperando análisis…</td></tr></tbody></table></div>
+<div class="pro-only"></div><div class="section"><h2>Top contratos</h2><span class="muted">liquidez + spread + Greeks</span></div><div class="card tablewrap"><table class="table"><thead><tr><th>#</th><th>TIPO</th><th>STRIKE</th><th>VENCE</th><th>BID</th><th>ASK</th><th>COSTO</th><th>OI</th><th>VOL</th><th>IV</th><th>DELTA</th><th>THETA</th><th>SCORE</th></tr></thead><tbody id="optionRows"><tr><td colspan="13">Esperando análisis…</td></tr></tbody></table></div>
 
-<div class="section"><h2>GEX Dashboard</h2><span class="muted">Gamma Exposure · Call Wall · Put Wall · Flip</span></div>
+<div class="pro-only"><div class="section"><h2>GEX Dashboard</h2><span class="muted">Gamma Exposure · Call Wall · Put Wall · Flip</span></div>
 <div class="grid">
 <section class="card goldcard"><div class="eyebrow">NIVELES GEX</div><div class="gexgrid"><div class="metric"><small>NET GEX</small><b id="netGex">—</b></div><div class="metric"><small>CALL WALL</small><b class="green" id="callWall">—</b></div><div class="metric"><small>PUT WALL</small><b class="red" id="putWall">—</b></div><div class="metric"><small>GAMMA FLIP</small><b class="gold" id="gexFlip">—</b></div></div><div class="gexbars" id="gexBars"><div class="muted">Esperando cadena de opciones…</div></div><div class="panelnote">GEX es una aproximación basada en gamma y open interest. No predice con certeza el próximo precio.</div></section>
 <section class="card"><div class="eyebrow">ORDER FLOW / BOOKMAP PROXY</div><div class="metrics"><div class="metric"><small>BUY VOLUME</small><b class="green" id="buyVol">—</b></div><div class="metric"><small>SELL VOLUME</small><b class="red" id="sellVol">—</b></div><div class="metric"><small>IMBALANCE</small><b id="imbalance">—</b></div><div class="metric"><small>FUENTE</small><b class="gold">Proxy P/V</b></div></div><div class="heat"><canvas id="flowCanvas"></canvas></div><div class="panelnote" id="flowNote">Este panel no es Bookmap L2/MBO real. Para liquidez resting, DOM e icebergs necesitamos un feed de profundidad compatible.</div></section>
 </div>
 
+</div>
+<div class="section"><h2>Amigos / Chat LEONIX</h2><span class="muted">comparte ideas y operaciones</span></div>
+<section class="socialwrap">
+  <aside class="friendside">
+    <div class="friendhead"><b>👥 Amigos</b><div class="grow"></div><button class="addfriend" id="addFriendBtn">+ Agregar</button></div>
+    <div class="friendsearch"><input id="friendSearch" placeholder="Buscar usuario..."></div>
+    <div id="friendList">
+      <div class="frienditem active" data-friend="Carlos"><div class="avatar">C</div><div><b>Carlos</b><div class="muted">En línea</div></div><span class="presence"></span></div>
+      <div class="frienditem" data-friend="Luis"><div class="avatar">L</div><div><b>Luis</b><div class="muted">Hace 8 min</div></div></div>
+      <div class="frienditem" data-friend="Marco"><div class="avatar">M</div><div><b>Marco</b><div class="muted">En línea</div></div><span class="presence"></span></div>
+    </div>
+    <div class="request" id="friendRequest" style="display:none">Solicitud enviada. <button id="acceptDemo">Aceptar demo</button></div>
+  </aside>
+
+  <div class="chatmain">
+    <div class="chathead"><div class="avatar" id="chatAvatar">C</div><div><b id="chatName">Carlos</b><div class="muted">Chat LEONIX · operación compartida</div></div></div>
+    <div class="chatbody" id="chatBody">
+      <div class="msg them">¿Qué estás mirando ahora?</div>
+      <div class="msg me">Estoy revisando NVDA con LEONIX.</div>
+      <div class="msg me">
+        Mira esta operación:
+        <div class="tradecard"><b>NVDA · CALL</b><br>Entrada: $208.50 · Stop: $205.40<br>TP1: $216.20 · TP2: $223.50<br><span class="gold">LEONIX Score: 87/100</span></div>
+      </div>
+      <div class="msg them">Perfecto. Si esa no confirma, revisamos PLTR.</div>
+    </div>
+    <div class="chatcomposer">
+      <input id="chatInput" placeholder="Escribe un mensaje...">
+      <button id="shareTradeBtn">📤 Operación</button>
+      <button id="sendChatBtn">Enviar</button>
+    </div>
+  </div>
+</section>
 <div class="notice">El sistema puede destacar la mejor oportunidad relativa, pero no puede garantizar ganancias. Las opciones pueden perder el 100% de la prima.</div>
 </main>
-<nav class="bottom"><button class="active"><span>⌂</span>Inicio</button><button><span>▣</span>Contratos</button><button><span>⌁</span>Mercados</button><button><span>◎</span>Análisis</button><button><span>🦁</span>León AI</button></nav>
+<nav class="bottom"><button class="active"><span>⌂</span>Inicio</button><button><span>▣</span>Contratos</button><button><span>⌁</span>Mercados</button><button><span>◎</span>Análisis</button><button><span>🦁</span>LEONIX AI</button></nav>
 <script>
 const API=(window.CONTRATOS_LEON_API||'').replace(/\/$/,'');const H=['1m','2m','3m','4m','5m','10m','15m','30m','45m','1h','2h','4h','1d','3d','1w'];let selected='15m';const $=id=>document.getElementById(id);const money=v=>v==null?'—':'$'+Number(v).toFixed(2);const pct=v=>v==null?'—':Number(v).toFixed(1)+'%';
 function renderRanges(){$('ranges').innerHTML=H.map(h=>`<button class="${h===selected?'active':''}" data-h="${h}">${h}</button>`).join('');document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{selected=b.dataset.h;renderRanges();scanOptions()})}
 async function get(path){let r=await fetch(API+path),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||('HTTP '+r.status));return d}
-async function health(){try{let d=await get('/api/health');$('backend').textContent=d.alpha_vantage?'DATOS REALES ACTIVOS':'BACKEND ACTIVO'}catch(e){$('backend').textContent='SIN CONEXIÓN'}}
+function alphaCountdown(resetAt){if(!resetAt)return 'Reinicio diario';let ms=new Date(resetAt)-new Date();if(ms<=0)return 'Reiniciando…';let h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return `Reinicia en ${h}h ${m}m`}
+function paintAlphaUsage(st){if(!st)return;window.__alphaResetAt=st.resets_at;let key='leon_alpha_usage_'+st.date,local=Number(localStorage.getItem(key)||0),used=Math.max(Number(st.used||0),local);if(st.limit_hit)used=Number(st.limit||25);localStorage.setItem(key,String(used));let limit=Number(st.limit||25),remaining=Math.max(0,limit-used),pct=Math.max(0,Math.min(100,remaining/limit*100));$('alphaRemaining').textContent=`${remaining} / ${limit}`;$('alphaQuotaBar').style.width=pct+'%';$('alphaReset').textContent=alphaCountdown(st.resets_at);$('alphaQuotaSub').textContent=remaining?`Quedan ${remaining} consultas Alpha. Twelve Data sigue como fuente principal.`:'Alpha agotado hoy. Twelve Data continúa para precios/gráficas.';$('alphaQuota').classList.toggle('danger',remaining<=5)}
+async function refreshAlphaUsage(){try{paintAlphaUsage(await get('/api/alpha-usage'))}catch(e){$('alphaQuotaSub').textContent='No se pudo leer el contador Alpha'}}
+let __marketTarget=null,__marketMode='closed';
+function hhmmss(ms){if(ms<=0)return '00:00:00';let sec=Math.floor(ms/1000),h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`}
+function tickMarketClock(){if(!__marketTarget)return;let ms=new Date(__marketTarget)-new Date();$('marketCountdown').textContent=hhmmss(ms);if(ms<=0)setTimeout(refreshMarketClock,1200)}
+function paintMarketClock(d){let box=$('marketClock');__marketMode=d.status;__marketTarget=d.target_at;box.classList.toggle('closed',d.status!=='open');$('marketClockTitle').textContent=d.status==='open'?'🟢 MERCADO ABIERTO · CIERRA EN':'APERTURA DEL MERCADO · ABRE EN';$('marketClockSub').textContent=d.status==='open'?'Sesión regular NYSE/NASDAQ · 9:30 AM–4:00 PM ET':'Próxima sesión regular · 9:30 AM ET';$('marketNext').textContent=d.target_label||'Hora de Nueva York';tickMarketClock()}
+async function refreshMarketClock(){try{paintMarketClock(await get('/api/market-clock'))}catch(e){$('marketClockSub').textContent='No se pudo calcular la apertura';$('marketCountdown').textContent='--:--:--'}}
+async function health(){try{let d=await get('/api/health');$('backend').textContent=(d.twelve_data||d.alpha_vantage)?'DATOS REALES ACTIVOS':'BACKEND ACTIVO';paintAlphaUsage(d.alpha_daily)}catch(e){$('backend').textContent='SIN CONEXIÓN'}}
 async function scanHorizons(){let s=$('symbol').value.trim().toUpperCase()||'NVDA';try{let d=await get('/api/options/horizons?symbol='+encodeURIComponent(s));let b=d.best_horizon;if(b){selected=b.horizon;$('bestRange').textContent=b.horizon;$('rangeWin').textContent=pct(b.win_rate);$('rangeRet').textContent=(b.avg_return_pct>=0?'+':'')+Number(b.avg_return_pct).toFixed(2)+'%';$('rangeScore').textContent=b.leon_range_score+'/100'}$('rangeRows').innerHTML=d.ranges.map(x=>`<tr><td><b>${x.horizon}</b></td><td>${pct(x.win_rate)}</td><td>${x.avg_return_pct==null?'—':(x.avg_return_pct>=0?'+':'')+Number(x.avg_return_pct).toFixed(2)+'%'}</td><td class="gold">${x.leon_range_score==null?'—':x.leon_range_score+'/100'}</td><td>${x.leon_range_score==null?'SIN DATOS':x.leon_range_score>=75?'FUERTE':x.leon_range_score>=60?'VIGILAR':'ESPERAR'}</td></tr>`).join('');renderRanges()}catch(e){$('rangeNote').textContent=e.message}}
 async function scanOptions(){let s=$('symbol').value.trim().toUpperCase()||'NVDA';try{let q=await get('/api/quote?symbol='+encodeURIComponent(s));$('spot').textContent=money(q.price)}catch(e){}try{let d=await get('/api/options/scan?symbol='+encodeURIComponent(s)+'&direction=AUTO&horizon='+encodeURIComponent(selected)+'&top=5'),b=d.best;$('bestContract').textContent=s+' '+d.direction+' '+money(b.strike);$('direction').textContent=d.direction;$('strike').textContent=money(b.strike);$('exp').textContent=b.expiration||'—';$('cost').textContent=money(b.cost_1_contract);$('contractScore').textContent=b.leon_score+'/100';$('oi').textContent=Number(b.open_interest||0).toLocaleString();$('iv').textContent=b.iv?Number(b.iv*100).toFixed(1)+'%':'—';$('greeks').textContent=Number(b.delta||0).toFixed(2)+' / '+Number(b.theta||0).toFixed(3);$('optionNote').textContent=d.note;$('optionRows').innerHTML=d.top.map((o,i)=>`<tr><td>${i+1}</td><td>${o.type||d.direction}</td><td>${money(o.strike)}</td><td>${o.expiration||'—'}</td><td>${money(o.bid)}</td><td>${money(o.ask)}</td><td>${money(o.cost_1_contract)}</td><td>${Number(o.open_interest||0).toLocaleString()}</td><td>${Number(o.volume||0).toLocaleString()}</td><td>${o.iv?Number(o.iv*100).toFixed(1)+'%':'—'}</td><td>${Number(o.delta||0).toFixed(2)}</td><td>${Number(o.theta||0).toFixed(3)}</td><td class="gold">${o.leon_score}</td></tr>`).join('')}catch(e){$('bestContract').textContent='Cadena no disponible';$('optionRows').innerHTML=`<tr><td colspan="13">${e.message}</td></tr>`;$('optionNote').textContent=e.message}}
 
@@ -172,7 +278,7 @@ function fmtPick(o){
 async function fullScan(){
  let s=$('symbol').value.trim().toUpperCase()||'NVDA';
  try{
-   let d=await get('/api/leon/full-scan?symbol='+encodeURIComponent(s)+'&horizon=AUTO&top=7');
+   let d=await get('/api/leon/full-scan?symbol='+encodeURIComponent(s)+'&horizon=AUTO&top=7'); updateEasyModeFromScan(d);
    let b=d.best; window.__leonBest=b;
    $('fullBest').textContent=`${s} ${d.direction} ${money(b.strike)}`;
    $('fullScore').textContent=b.unified_score+'/100';
@@ -351,5 +457,81 @@ $('paperReset').addEventListener('click',resetPaper);
 $('paperStart').addEventListener('change',()=>{if(!PAPER.pos)resetPaper()});
 setInterval(paperMark,1000);
 resetPaper();
-async function run(){await health();await scanHorizons();await scanOptions();await loadGex();await loadFlow();await fullScan();await loadTradingChart()}$('scan').onclick=run;$('symbol').onkeydown=e=>{if(e.key==='Enter')run()};renderRanges();run();
+
+let appMode='pro';
+function setAppMode(mode){
+ appMode=mode;
+ document.body.classList.toggle('easy-mode', mode==='easy');
+ $('easyModeBtn').classList.toggle('active',mode==='easy');
+ $('proModeBtn').classList.toggle('active',mode==='pro');
+ $('modeHint').textContent=mode==='easy'
+   ?'Fácil: LEONIX resume todo y solo te muestra la decisión, entrada, stop, objetivo y score.'
+   :'Profesional: muestra GEX, Order Flow, Greeks, indicadores, contratos y análisis completo.';
+ localStorage.setItem('contratosLeonMode',mode);
+}
+$('easyModeBtn').onclick=()=>setAppMode('easy');
+$('proModeBtn').onclick=()=>setAppMode('pro');
+setAppMode(localStorage.getItem('contratosLeonMode')||'pro');
+
+function updateEasyModeFromScan(d){
+ if(!d)return;
+ let b=d.best||{};
+ let score=Number(b.unified_score||b.leon_score||0);
+ let signal=score>=85?'OPERAR':score>=70?'ESPERAR CONFIRMACIÓN':'NO OPERAR';
+ $('easySignal').textContent=signal;
+ $('easySignal').className='big '+(signal==='OPERAR'?'green':signal==='NO OPERAR'?'red':'gold');
+ $('easyTicker').textContent=d.symbol||$('symbol').value.toUpperCase();
+ $('easyDir').textContent=d.direction||b.type||'—';
+ $('easyEntry').textContent=money(d.spot||0);
+ $('easyStop').textContent=money(d.gex?.put_wall||0);
+ $('easyTarget').textContent=money(d.gex?.call_wall||b.break_even||0);
+ $('easyScore').textContent=score?score+'/100':'—';
+ $('easyWhy').textContent=(d.note||'LEONIX combina tendencia, rango, opciones, flujo, GEX y liquidez para simplificar la decisión.');
+}
+
+
+const M7=['AAPL','MSFT','GOOGL','AMZN','NVDA','META','TSLA'];
+function fmtPct(v){if(v==null)return '—';let n=Number(v);return (n>=0?'+':'')+n.toFixed(2)+'%'}
+async function loadM7(){
+ try{
+  const d=await get('/api/magnificent7');
+  const all=d.all||[];
+  $('m7Grid').innerHTML=all.map(x=>{let cls=(Number(x.change_pct)>=0?'green':'red');return `<div class="m7card ${x.symbol===$('symbol').value.toUpperCase()?'active':''}" data-m7="${x.symbol}"><div class="m7sym">${x.symbol}</div><div class="m7price">${x.price?money(x.price):'Sin datos'}</div><div class="m7meta"><span class="${cls}">${fmtPct(x.change_pct)}</span><span>${x.score?x.score+'/100':'—'}</span></div><div class="muted">${x.strength||'—'} · ${x.signal||'—'}</div></div>`}).join('');
+  document.querySelectorAll('[data-m7]').forEach(el=>el.onclick=()=>{ $('symbol').value=el.dataset.m7; document.querySelectorAll('[data-m7]').forEach(x=>x.classList.toggle('active',x===el)); loadTradingChart(); });
+  const b=d.best;
+  $('m7Best').textContent=b?b.symbol:'NO OPERAR'; $('m7BestPrice').textContent=b?money(b.price):'—'; $('m7BestScore').textContent=b?b.score+'/100':'—'; $('m7BestSignal').textContent=b?b.signal:'SIN DATOS';
+  $('m7Note').textContent=d.note||$('m7Note').textContent;
+ }catch(e){$('m7Note').textContent='Magníficas 7: '+e.message}
+}
+$('m7Refresh').onclick=loadM7;
+
+let activeFriend='Carlos';
+function addMsg(text,me=true,trade=false){
+ const d=document.createElement('div');d.className='msg '+(me?'me':'them');
+ d.innerHTML=trade?text:text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ $('chatBody').appendChild(d);$('chatBody').scrollTop=$('chatBody').scrollHeight;
+}
+function sendChatMessage(){
+ const v=$('chatInput').value.trim();if(!v)return;addMsg(v,true,false);$('chatInput').value='';
+}
+$('sendChatBtn').onclick=sendChatMessage;
+$('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChatMessage()});
+$('shareTradeBtn').onclick=()=>{
+ const s=$('symbol').value.trim().toUpperCase()||'NVDA';
+ const entry=$('chartEntry')?.textContent||'—', stop=$('chartStop')?.textContent||'—', target=$('chartTarget')?.textContent||'—';
+ const score=$('fullScore')?.textContent||'—', dir=$('fullDirection')?.textContent||'—';
+ addMsg(`Operación compartida:<div class="tradecard"><b>${s} · ${dir}</b><br>Entrada: ${entry}<br>Stop: ${stop}<br>Objetivo: ${target}<br><span class="gold">LEONIX Score: ${score}</span></div>`,true,true);
+};
+document.querySelectorAll('.frienditem').forEach(el=>el.onclick=()=>{
+ document.querySelectorAll('.frienditem').forEach(x=>x.classList.remove('active'));el.classList.add('active');
+ activeFriend=el.dataset.friend;$('chatName').textContent=activeFriend;$('chatAvatar').textContent=activeFriend[0];
+ $('chatBody').innerHTML=`<div class="msg them">Chat con ${activeFriend}. Comparte aquí una operación de LEONIX.</div>`;
+});
+$('addFriendBtn').onclick=()=>{
+ const q=$('friendSearch').value.trim()||'nuevo_usuario';
+ $('friendRequest').style.display='block';
+ $('friendRequest').firstChild.textContent='Solicitud enviada a '+q+'. ';
+};
+$('acceptDemo').onclick=()=>{$('friendRequest').style.display='none'};
+async function run(){await health();await loadM7();await scanHorizons();await scanOptions();await loadGex();await loadFlow();await fullScan();await loadTradingChart()}$('scan').onclick=run;$('symbol').onkeydown=e=>{if(e.key==='Enter')run()};renderRanges();health();refreshAlphaUsage();refreshMarketClock();loadM7();loadTradingChart();setInterval(refreshAlphaUsage,15000);setInterval(refreshMarketClock,60000);setInterval(tickMarketClock,1000);setInterval(()=>{let el=$("alphaReset");if(el&&window.__alphaResetAt)el.textContent=alphaCountdown(window.__alphaResetAt)},60000);
 </script></body></html>

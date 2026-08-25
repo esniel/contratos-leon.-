@@ -1,114 +1,195 @@
 
-import os, math, statistics, requests
-from datetime import date
+import os, math, statistics, requests, time
+from datetime import date, datetime, timedelta
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from zoneinfo import ZoneInfo
 
-app = FastAPI(title="Contratos León Real Data API", version="36.0")
+app = FastAPI(title="Contratos León Real Data API", version="47.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["GET"], allow_headers=["*"])
 
 AV_KEY=os.getenv("ALPHAVANTAGE_API_KEY","").strip()
 TD_KEY=os.getenv("TWELVE_DATA_API_KEY","").strip()
+
+AV_DAILY_LIMIT=25
+_AV_USAGE={"date":None,"used":0,"limit_hit":False}
+NY_TZ=ZoneInfo("America/New_York")
+
+def alpha_usage_state():
+    now=datetime.now(NY_TZ)
+    day=now.date().isoformat()
+    if _AV_USAGE["date"]!=day:
+        _AV_USAGE.update({"date":day,"used":0,"limit_hit":False})
+    tomorrow=datetime.combine(now.date()+timedelta(days=1), datetime.min.time(), tzinfo=NY_TZ)
+    used=min(AV_DAILY_LIMIT,int(_AV_USAGE["used"]))
+    return {
+        "date":day,
+        "limit":AV_DAILY_LIMIT,
+        "used":used,
+        "remaining":max(0,AV_DAILY_LIMIT-used),
+        "limit_hit":bool(_AV_USAGE["limit_hit"]),
+        "resets_at":tomorrow.isoformat(),
+        "timezone":"America/New_York",
+        "note":"Contador de llamadas Alpha hechas por esta instancia. Si Render reinicia, Alpha Vantage sigue aplicando su límite real."
+    }
+
+MAGNIFICENT_7=["AAPL","MSFT","GOOGL","AMZN","NVDA","META","TSLA"]
+_M7_CACHE={"ts":0,"data":None}
+
 def td(endpoint, params=None):
     if not TD_KEY:
-        raise HTTPException(503, "TWELVE_DATA_API_KEY no configurada")
-    p = dict(params or {})
-    p["apikey"] = TD_KEY
-    r = requests.get(
-        f"https://api.twelvedata.com/{endpoint}",
-        params=p,
-        timeout=15
-    )
+        raise HTTPException(503,"TWELVE_DATA_API_KEY no configurada")
+    p=dict(params or {})
+    p["apikey"]=TD_KEY
+    r=requests.get(f"https://api.twelvedata.com/{endpoint}",params=p,timeout=20)
     r.raise_for_status()
-    d = r.json()
-    if d.get("status") == "error":
-        raise HTTPException(502, d.get("message", "Twelve Data error"))
+    d=r.json()
+    if isinstance(d,dict) and d.get("status")=="error":
+        raise HTTPException(502,d.get("message","Twelve Data error"))
     return d
+
 def av(params):
     if not AV_KEY:
         raise HTTPException(503,"ALPHAVANTAGE_API_KEY no configurada")
+    st=alpha_usage_state()
+    if st["remaining"]<=0:
+        raise HTTPException(429,"Límite diario Alpha Vantage agotado (25/25). Usa Twelve Data o espera el reinicio diario.")
     params=dict(params); params["apikey"]=AV_KEY
+    _AV_USAGE["used"]+=1
     r=requests.get("https://www.alphavantage.co/query",params=params,timeout=25)
     r.raise_for_status()
     d=r.json()
     if "Error Message" in d: raise HTTPException(404,d["Error Message"])
-    if "Note" in d or "Information" in d: raise HTTPException(429,d.get("Note") or d.get("Information"))
+    if "Note" in d or "Information" in d:
+        msg=d.get("Note") or d.get("Information")
+        if "25 requests per day" in str(msg).lower() or "rate limit" in str(msg).lower():
+            _AV_USAGE.update({"used":AV_DAILY_LIMIT,"limit_hit":True})
+        raise HTTPException(429,msg)
     return d
 
 @app.get("/")
 def home():
-    return {"ok":True,"service":"Contratos León API","version":"36.0","docs":"/docs"}
+    return {"ok":True,"service":"Contratos León API","version":"47.0","docs":"/docs"}
 
 @app.get("/health")
 @app.get("/api/health")
 def health():
-    return {"ok":True,"alpha_vantage":bool(AV_KEY),"options_provider":"Alpha Vantage"}
+    return {"ok":True,"alpha_vantage":bool(AV_KEY),"twelve_data":bool(TD_KEY),"market_provider":"Twelve Data" if TD_KEY else "Alpha Vantage","options_provider":"Alpha Vantage","alpha_daily":alpha_usage_state()}
+
+@app.get("/api/alpha-usage")
+def alpha_usage():
+    return alpha_usage_state()
+
+def market_clock_state():
+    now=datetime.now(NY_TZ)
+    open_t=now.replace(hour=9,minute=30,second=0,microsecond=0)
+    close_t=now.replace(hour=16,minute=0,second=0,microsecond=0)
+    # Sesión regular: lunes-viernes. Feriados bursátiles se incorporarán en una capa de calendario posterior.
+    if now.weekday()<5 and open_t <= now < close_t:
+        target=close_t
+        status="open"
+        label="Cierre hoy · 4:00 PM ET"
+    else:
+        status="closed"
+        if now.weekday()<5 and now < open_t:
+            target=open_t
+        else:
+            d=(now+timedelta(days=1)).date()
+            while d.weekday()>=5:
+                d+=timedelta(days=1)
+            target=datetime.combine(d, datetime.min.time(), tzinfo=NY_TZ).replace(hour=9,minute=30)
+        label=target.strftime("Próxima apertura · %a %b %d · 9:30 AM ET")
+    return {
+        "status":status,
+        "now":now.isoformat(),
+        "target_at":target.isoformat(),
+        "seconds":max(0,int((target-now).total_seconds())),
+        "target_label":label,
+        "timezone":"America/New_York",
+        "regular_hours":"09:30-16:00 ET"
+    }
+
+@app.get("/api/market-clock")
+def market_clock():
+    return market_clock_state()
 
 @app.get("/api/search")
 def search(q:str=Query(...,min_length=1,max_length=32)):
-    d=av({"function":"SYMBOL_SEARCH","keywords":q})
-    items=[]
-    for x in d.get("bestMatches",[])[:12]:
-        items.append({"symbol":x.get("1. symbol"),"name":x.get("2. name"),"type":x.get("3. type"),"region":x.get("4. region")})
-    return {"items":items}
+    q=q.upper().strip()
+    names={"AAPL":"Apple","MSFT":"Microsoft","GOOGL":"Alphabet / Google","AMZN":"Amazon","NVDA":"NVIDIA","META":"Meta Platforms","TSLA":"Tesla"}
+    items=[{"symbol":x,"name":names[x],"type":"Equity","region":"United States"} for x in MAGNIFICENT_7 if q in x or q in names[x].upper()]
+    return {"mode":"magnificent7","items":items}
 
 @app.get("/api/quote")
 def quote(symbol:str):
     symbol=symbol.upper().strip()
-
+    if symbol not in MAGNIFICENT_7:
+        raise HTTPException(403,"Modo prueba: Contratos León está limitado a las Magníficas 7")
     try:
         d=td("quote", {"symbol":symbol})
         price=float(d.get("close") or d.get("price") or 0)
         pct=float(d.get("percent_change") or 0)
-
-        if price > 0:
-            return {
-                "symbol":symbol,
-                "price":price,
-                "change_pct":pct,
-                "provider":"Twelve Data"
-            }
+        if price>0:
+            return {"symbol":symbol,"price":price,"change_pct":pct,"provider":"Twelve Data"}
     except Exception:
         pass
-
-    d=av({
-        "function":"GLOBAL_QUOTE",
-        "symbol":symbol
-    }).get("Global Quote",{})
-
-    if not d:
-        raise HTTPException(404,"Sin cotización")
-
-    return {
-        "symbol":symbol,
-        "price":float(d.get("05. price",0) or 0),
-        "change_pct":float(
-            str(d.get("10. change percent","0")).replace("%","") or 0
-        ),
-        "provider":"Alpha Vantage"
-    }
+    d=av({"function":"GLOBAL_QUOTE","symbol":symbol}).get("Global Quote",{})
+    if not d: raise HTTPException(404,"Sin cotización")
+    return {"symbol":symbol,"price":float(d.get("05. price",0) or 0),"change_pct":float(str(d.get("10. change percent","0")).replace("%","") or 0),"provider":"Alpha Vantage"}
 
 def series(symbol, intraday=True):
+    symbol=symbol.upper().strip()
+    interval="5min" if intraday else "1day"
+    try:
+        d=td("time_series", {"symbol":symbol,"interval":interval,"outputsize":120,"order":"ASC"})
+        vals=d.get("values") or []
+        rows=[]
+        for v in vals:
+            try: rows.append((v.get("datetime"),float(v.get("close")),float(v.get("volume") or 0)))
+            except: pass
+        rows.sort()
+        if rows: return rows
+    except Exception:
+        pass
     if intraday:
         d=av({"function":"TIME_SERIES_INTRADAY","symbol":symbol,"interval":"5min","outputsize":"compact"})
         key=next((k for k in d if k.startswith("Time Series")),None)
         ts=d.get(key,{}) if key else {}
-        rows=[]
-        for t,v in ts.items():
-            try: rows.append((t,float(v["4. close"]),float(v["5. volume"])))
-            except: pass
     else:
         d=av({"function":"TIME_SERIES_DAILY","symbol":symbol,"outputsize":"compact"})
         ts=d.get("Time Series (Daily)") or {}
-        rows=[]
-        for t,v in ts.items():
-            try: rows.append((t,float(v["4. close"]),float(v["5. volume"])))
-            except: pass
+    rows=[]
+    for t,v in ts.items():
+        try: rows.append((t,float(v["4. close"]),float(v["5. volume"])))
+        except: pass
     rows.sort()
     return rows
 
 def steps(h):
     return {"1m":1,"2m":1,"3m":1,"4m":1,"5m":1,"10m":2,"15m":3,"30m":6,"45m":9,"1h":12,"2h":24,"4h":48,"1d":1,"3d":3,"1w":5}.get(h,3)
+
+@app.get("/api/magnificent7")
+def magnificent7():
+    now=time.time()
+    if _M7_CACHE["data"] and now-_M7_CACHE["ts"]<60:
+        return _M7_CACHE["data"]
+    rows=[]
+    for sym in MAGNIFICENT_7:
+        try:
+            q=quote(sym)
+            pct=f(q.get("change_pct"),0)
+            score=round(_clamp(62+pct*4,35,92),1)
+            strength="FUERTE" if score>=75 else "NEUTRAL" if score>=58 else "DÉBIL"
+            signal="VIGILAR" if score>=75 else "ESPERAR" if score>=58 else "EVITAR"
+            rows.append({"symbol":sym,"price":f(q.get("price")),"change_pct":pct,"score":score,"strength":strength,"signal":signal,"provider":q.get("provider")})
+        except Exception as e:
+            rows.append({"symbol":sym,"price":None,"change_pct":None,"score":0,"strength":"SIN DATOS","signal":"NO OPERAR","error":str(e)})
+    valid=[x for x in rows if x.get("price")]
+    valid.sort(key=lambda x:x.get("score",0),reverse=True)
+    best=valid[0] if valid else None
+    data={"mode":"MAGNIFICENT_7_TEST","symbols":MAGNIFICENT_7,"best":best,"ranking":valid,"all":rows,"note":"Ranking inicial de mercado para pruebas. Los contratos de opciones siguen en módulos separados y requieren datos de opciones compatibles. No garantiza ganancias."}
+    _M7_CACHE.update({"ts":now,"data":data})
+    return data
 
 @app.get("/api/backtest")
 def backtest(symbol:str,horizon:str="15m"):
@@ -410,46 +491,33 @@ def leon_full_scan(symbol:str, horizon:str="AUTO", top:int=5):
 @app.get("/api/chart")
 def chart_data(symbol:str, timeframe:str="5m", limit:int=120):
     symbol=symbol.upper().strip()
-    # Map requested timeframe to available AV intervals.
-    intraday_map={"1m":"1min","2m":"1min","3m":"1min","4m":"1min","5m":"5min",
-                  "10m":"5min","15m":"15min","30m":"30min","45m":"15min",
-                  "1h":"60min","2h":"60min","4h":"60min"}
+    if symbol not in MAGNIFICENT_7:
+        raise HTTPException(403,"Modo prueba: gráfico limitado a las Magníficas 7")
     tf=timeframe.lower()
+    td_map={"1m":"1min","2m":"1min","3m":"1min","4m":"1min","5m":"5min","10m":"5min","15m":"15min","30m":"30min","45m":"15min","1h":"1h","2h":"1h","4h":"4h","1d":"1day","1w":"1week"}
+    interval=td_map.get(tf,"5min")
     rows=[]
-    if tf in intraday_map:
-        interval=intraday_map[tf]
-        d=av({"function":"TIME_SERIES_INTRADAY","symbol":symbol,"interval":interval,"outputsize":"compact"})
-        key=next((k for k in d if k.startswith("Time Series")),None)
-        ts=d.get(key,{}) if key else {}
-        for t,v in ts.items():
+    provider="Twelve Data"
+    try:
+        d=td("time_series", {"symbol":symbol,"interval":interval,"outputsize":max(20,min(limit,500)),"order":"ASC"})
+        for v in d.get("values") or []:
             try:
-                rows.append({
-                    "time":t,
-                    "open":float(v["1. open"]),
-                    "high":float(v["2. high"]),
-                    "low":float(v["3. low"]),
-                    "close":float(v["4. close"]),
-                    "volume":float(v["5. volume"])
-                })
+                rows.append({"time":v.get("datetime"),"open":float(v.get("open")),"high":float(v.get("high")),"low":float(v.get("low")),"close":float(v.get("close")),"volume":float(v.get("volume") or 0)})
             except: pass
-    else:
-        d=av({"function":"TIME_SERIES_DAILY","symbol":symbol,"outputsize":"compact"})
-        ts=d.get("Time Series (Daily)") or {}
+    except Exception:
+        provider="Alpha Vantage"
+        intraday_map={"1m":"1min","2m":"1min","3m":"1min","4m":"1min","5m":"5min","10m":"5min","15m":"15min","30m":"30min","45m":"15min","1h":"60min","2h":"60min","4h":"60min"}
+        if tf in intraday_map:
+            d=av({"function":"TIME_SERIES_INTRADAY","symbol":symbol,"interval":intraday_map[tf],"outputsize":"compact"})
+            key=next((k for k in d if k.startswith("Time Series")),None); ts=d.get(key,{}) if key else {}
+        else:
+            d=av({"function":"TIME_SERIES_DAILY","symbol":symbol,"outputsize":"compact"}); ts=d.get("Time Series (Daily)") or {}
         for t,v in ts.items():
-            try:
-                rows.append({
-                    "time":t,
-                    "open":float(v["1. open"]),
-                    "high":float(v["2. high"]),
-                    "low":float(v["3. low"]),
-                    "close":float(v["4. close"]),
-                    "volume":float(v["5. volume"])
-                })
+            try: rows.append({"time":t,"open":float(v["1. open"]),"high":float(v["2. high"]),"low":float(v["3. low"]),"close":float(v["4. close"]),"volume":float(v["5. volume"])})
             except: pass
-    rows.sort(key=lambda x:x["time"])
+    rows.sort(key=lambda x:x["time"] or "")
     rows=rows[-max(20,min(limit,500)):]
-    if not rows:
-        raise HTTPException(422,"No hay datos de gráfico para este rango.")
+    if not rows: raise HTTPException(422,"No hay datos de gráfico para este rango.")
 
     # Indicators calculated locally on returned bars.
     cum_pv=0.0; cum_v=0.0
@@ -477,6 +545,6 @@ def chart_data(symbol:str, timeframe:str="5m", limit:int=120):
             "resistance":resistance,
             "last":last
         },
-        "provider":"Alpha Vantage",
+        "provider":provider,
         "note":"Velas e indicadores se calculan automáticamente con los datos disponibles del proveedor."
     }

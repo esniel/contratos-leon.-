@@ -1,53 +1,32 @@
-# Contratos León v38 — Full Intelligence
+# LEONIX v46 — Magníficas 7
 
-Incluye:
-- Escáner automático 1m → 1w
-- Mejor rango automático
-- Cadena CALL/PUT
-- León Score unificado:
-  * Options score 42%
-  * Range score 22%
-  * Order-flow proxy 16%
-  * GEX 12%
-  * Liquidez 8%
-- GEX / Net GEX / Call Wall / Put Wall / Gamma Flip
-- Order-flow proxy
-- Mejor / Conservadora / Agresiva
-- Explicación del porqué
-- Top contratos ordenados por score unificado
+Versión de prueba enfocada en AAPL, MSFT, GOOGL, AMZN, NVDA, META y TSLA.
 
-Importante:
-- REALTIME_OPTIONS requiere un proveedor compatible/plan adecuado.
-- El order-flow actual es proxy de precio/volumen, NO Bookmap L2/MBO real.
-- Ningún score garantiza ganancias.
+## Incluye
+- Twelve Data como fuente principal para cotización y gráficos.
+- Alpha Vantage como respaldo de mercado y proveedor configurado para opciones.
+- Escáner Magníficas 7 con ranking inicial y selección rápida.
+- Modo Fácil / Profesional.
+- Contratos CALL/PUT, Greeks, GEX y Order Flow proxy (cuando el proveedor de opciones tenga acceso compatible).
+- Gráficas LEONIX, Paper Trading, Trabajar Solo, Backtesting y Chat LEONIX.
+- Inicio liviano: al abrir la app no consume automáticamente la cadena de opciones; el botón ANÁLISIS COMPLETO ejecuta los módulos profundos.
+
+## Variables en Render
+- TWELVE_DATA_API_KEY
+- ALPHAVANTAGE_API_KEY
+
+## Importante
+Esta versión prioriza siete acciones para probar estabilidad y flujo completo. Los scores no garantizan ganancias. Si no hay datos de opciones compatibles, la app debe mostrar que faltan datos en vez de inventar contratos.
 
 
-## v41 — Gráficas León
-- Pantalla tipo trading
-- Velas automáticas
-- Volumen
-- VWAP
-- EMA 9 / EMA 20
-- Soporte y resistencia
-- Entrada / objetivo / invalidación
-- Rango 1m, 5m, 15m, 30m, 1h, 4h, 1D, 1W
-- Auto-refresh cada 15 segundos en el frontend
-- Endpoint /api/chart
+## v46 — Contador Alpha 25/día
+- Contador visible de consultas Alpha Vantage restantes.
+- Reinicio diario mostrado en hora de Nueva York.
+- Twelve Data sigue siendo la fuente principal para precios/gráficas; Alpha se reserva como respaldo y opciones.
+- El contador refleja llamadas hechas por la instancia y reconoce cuando Alpha reporta el límite agotado.
 
-La visualización es analítica; no ejecuta órdenes.
-
-
-## v42 — Paper Trading León
-- Cuenta simulada inicial de $10,000
-- Saldo inicial editable
-- Monto manual por operación
-- Asignación automática por porcentaje
-- LONG/CALL y SHORT/PUT simulados
-- Apertura y cierre de posiciones falsas
-- P/L abierto en vivo
-- P/L realizado
-- Balance, efectivo, capital invertido y retorno
-- Historial de operaciones
-- Marcado automático con el precio de la gráfica
-
-No envía órdenes reales ni mueve dinero.
+## v47 — Reloj del mercado
+- Contador Alpha Vantage 25/día.
+- Debajo: cuenta regresiva automática hasta la próxima apertura regular (9:30 AM ET).
+- Durante sesión: cambia automáticamente a “Mercado abierto” y cuenta hasta el cierre (4:00 PM ET).
+- Fines de semana: salta a la próxima sesión de lunes a viernes.
