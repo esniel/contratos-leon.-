@@ -10,3 +10,9 @@ services:
         sync: false
       - key: TWELVE_DATA_API_KEY
         sync: false
+      - key: ALPACA_KEY_ID
+        sync: false
+      - key: ALPACA_SECRET_KEY
+        sync: false
+      - key: TRADINGVIEW_WEBHOOK_SECRET
+        sync: false
