@@ -319,9 +319,10 @@ function renderShield(d){
   if(!sh||!ro)return;
   let badge=$('shieldBadge');badge.textContent=sh.status;badge.className='shieldbadge '+sh.status;
   if(hub){
-    $('hubRow').innerHTML=Object.entries(hub.providers).map(([name,p])=>
-      `<span class="hubchip ${p.status}">${name} · ${p.status}</span>`
-    ).join('');
+    $('hubRow').innerHTML=Object.entries(hub.providers).map(([name,p])=>{
+      let ws = name==='alpaca' && p.ws_connected!==undefined ? (p.ws_connected?' · ws conectado':' · ws reconectando'):'';
+      return `<span class="hubchip ${p.status}">${name} · ${p.status}${ws}</span>`;
+    }).join('');
   }
   $('shieldGates').innerHTML=sh.gates.map(g=>`<div class="gate ${g.status}"><b>${g.name}</b><span>${g.detail}</span></div>`).join('');
   let pill=$('decisionPill'),dec=ro.decision.replace(' ','');

@@ -60,3 +60,22 @@ Correcciones de calidad detectadas en revisión manual del código antes de conf
 - **`/health` honesto**: ya no dice "Twelve Data" fijo como proveedor principal — refleja Alpaca si está configurada, e incluye la versión real (`50.0`) y el snapshot del Data Hub.
 - **Calendario NYSE**: `market_clock_state()` ahora conoce los feriados bursátiles de 2026-2027 (lista fija en `NYSE_HOLIDAYS`, hay que actualizarla cada año — no hay API de calendario integrada todavía) y ya no los trata como día hábil normal.
 - **Pruebas**: `test_paper_engine.py` — 15 pruebas de humo sin red ni API keys (stubea FastAPI, inyecta datos falsos de opciones) que verifican: aritmética de slippage/comisión al abrir y cerrar, que nunca se inventa un precio si el contrato desaparece de la cadena, que el límite de pérdida diaria y el de tamaño de posición bloquean de verdad, y que el calendario de feriados funciona. Correr con `python3 test_paper_engine.py`.
+
+## v51 — Live Data Engine (Alpaca WebSocket)
+Objetivo: `Alpaca WebSocket → Magnificent 7 LIVE → Data Hub → Health/latency → Consensus → Risk Shield`, para dejar de depender solo de REST periódico.
+
+**Decisiones de arquitectura (documentadas para que quien retome esto no tenga que adivinar):**
+- La conexión WebSocket corre como una tarea `asyncio` **dentro del mismo proceso uvicorn** (`asyncio.create_task` en el evento `startup` de FastAPI), no en un worker separado. Solo se lanza si `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` están configuradas.
+- Feed usado: `wss://stream.data.alpaca.markets/v2/iex` (plan free de Alpaca, datos IEX) por defecto — configurable con `ALPACA_WS_URL` si se sube a un plan con SIP.
+- Se suscribe a `quotes` de las Magníficas 7. Cada mensaje actualiza `_LIVE_CACHE[symbol]` en memoria y llama `_record_health("alpaca", data_time=...)` con la hora real del tick — así el Data Hub de v50 queda alimentado con antigüedad real, no aproximada.
+- Reconexión con backoff exponencial (2s → 60s máx) ante cualquier error o corte. `GET /api/live/status` expone si está conectado, cuándo llegó el último mensaje, y cuántas reconexiones lleva.
+- **Fallback intacto**: `quote()` ahora prueba primero el caché LIVE (si el dato tiene menos de 20s); si no hay dato fresco, cae exactamente al mismo camino de antes (Alpaca REST → Twelve Data → Alpha Vantage). Si el WebSocket nunca conecta (red bloqueada, plan sin acceso, key inválida), LEONIX sigue funcionando igual que en v50, solo que más lento.
+- **Render free tier**: si el servicio duerme por inactividad y Render lo despierta, el evento `startup` vuelve a lanzar la tarea automáticamente — no hace falta intervención manual.
+- Nuevos endpoints: `GET /api/live/status` (salud de la conexión), `GET /api/live/quotes` (caché crudo, sin llamadas upstream — pensado para que el frontend haga polling rápido y barato contra esto en vez de golpear `/api/quote` repetidamente, aunque por ahora el frontend sigue usando `/api/quote`, que ya prioriza el caché LIVE internamente).
+- **Pendiente, no resuelto en v51**: el frontend todavía hace polling a `/api/quote`/`/api/chart` en vez de tener su propio WebSocket o SSE hacia el navegador. Eso quedaría para cuando el "Live Data Engine" se sienta realmente en tiempo real en la interfaz, no solo en el backend.
+- Nueva dependencia: `websockets==13.1` en `requirements.txt`.
+- **Pruebas**: se añadieron a `test_paper_engine.py` — parseo de timestamps con nanosegundos de Alpaca, que el caché descarta datos con más de 20s, que `quote()` prioriza el caché LIVE, que la tarea de fondo no revienta si falta la librería `websockets`, y una simulación completa de un mensaje de quote real (sin red) verificando que el precio y el `market_time` se calculan correctamente. No se pudo probar la conexión real (sin credenciales ni red en este entorno) — eso solo se valida desplegando en Render con `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` reales.
+
+## Hotfix post-v51 (detectado por prueba local del usuario)
+- `HEAD /` devolvía 405 Method Not Allowed — algunos monitores/health-checks (Render incluido) mandan HEAD antes del GET real. Se cambió `/`, `/health` y `/api/health` a `@app.api_route(..., methods=["GET","HEAD"])`.
+- Se corrigió que `home()` y `health()` seguían reportando `"version":"50.0"` de forma hardcodeada aunque el título de la app ya decía `51.0` — descuido mío al bumpear la versión en v51, no lo propagué a los dos endpoints que la repiten literal.

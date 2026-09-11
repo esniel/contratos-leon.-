@@ -1,11 +1,15 @@
 
-import os, math, re, statistics, requests, time
+import os, math, re, statistics, requests, time, asyncio, json
 from datetime import date, datetime, timedelta
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from zoneinfo import ZoneInfo
+try:
+    import websockets
+except ImportError:
+    websockets=None
 
-app = FastAPI(title="Contratos León Real Data API", version="50.0")
+app = FastAPI(title="Contratos León Real Data API", version="51.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["GET","POST"], allow_headers=["*"])
 
 AV_KEY=os.getenv("ALPHAVANTAGE_API_KEY","").strip()
@@ -14,6 +18,7 @@ ALPACA_KEY=os.getenv("ALPACA_KEY_ID","").strip()
 ALPACA_SECRET=os.getenv("ALPACA_SECRET_KEY","").strip()
 ALPACA_DATA_BASE="https://data.alpaca.markets"
 ALPACA_PAPER_BASE="https://paper-api.alpaca.markets"
+ALPACA_WS_URL=os.getenv("ALPACA_WS_URL","wss://stream.data.alpaca.markets/v2/iex").strip()
 
 AV_DAILY_LIMIT=25
 _AV_USAGE={"date":None,"used":0,"limit_hit":False}
@@ -109,6 +114,8 @@ def data_hub_snapshot():
             "latency_ms":_PROVIDER_HEALTH[name].get("last_latency_ms"),
             "last_error":_PROVIDER_HEALTH[name].get("last_error"),
         }
+        if name=="alpaca":
+            providers[name]["ws_connected"]=_WS_STATE.get("connected", False)
     any_live=any(p["status"]=="LIVE" for p in providers.values())
     all_down=all(p["status"]=="DOWN" for p in providers.values())
     if all_down:
@@ -157,6 +164,92 @@ def alpaca_quote(symbol):
         _record_health("alpaca", True, data_time=market_time)
     return {"symbol":symbol,"price":price,"bid":bid,"ask":ask,"change_pct":None,"provider":"Alpaca",
             "market_time":market_time,"market_time_iso":q.get("t")}
+
+# --- v51: Alpaca WebSocket -> caché LIVE en memoria ---------------------
+# Diseño: una sola tarea asyncio de fondo, dentro del mismo proceso uvicorn
+# (no un worker aparte). Se lanza en el evento startup de FastAPI SOLO si
+# hay credenciales de Alpaca. Reconecta con backoff exponencial si se cae.
+# El caché (_LIVE_CACHE) es lo que consulta quote() primero; si no hay dato
+# fresco ahí, cae a REST (Alpaca -> Twelve Data -> Alpha Vantage), igual
+# que antes. En el plan free de Render, si el servicio duerme por
+# inactividad, la tarea se reinicia sola al despertar (ver evento startup).
+_LIVE_CACHE={}
+_WS_STATE={"connected":False,"last_message_at":None,"reconnects":0,"last_error":None,"started":False}
+WS_MAX_BACKOFF_S=60
+
+def _live_quote(symbol):
+    c=_LIVE_CACHE.get(symbol)
+    if not c: return None
+    ref=c.get("market_time") or c.get("received_at")
+    if ref is None: return None
+    if time.time()-ref > DATA_HUB_DELAYED_AFTER_S:
+        return None
+    return c
+
+async def alpaca_ws_loop():
+    if websockets is None:
+        _WS_STATE["last_error"]="librería websockets no instalada"
+        return
+    backoff=2
+    while True:
+        try:
+            async with websockets.connect(ALPACA_WS_URL, ping_interval=15, ping_timeout=10) as ws:
+                await ws.send(json.dumps({"action":"auth","key":ALPACA_KEY,"secret":ALPACA_SECRET}))
+                await ws.recv()  # respuesta de auth; no bloqueamos el loop si falla, el próximo mensaje lo revela
+                await ws.send(json.dumps({"action":"subscribe","quotes":MAGNIFICENT_7}))
+                _WS_STATE["connected"]=True
+                _WS_STATE["last_error"]=None
+                backoff=2
+                async for raw in ws:
+                    try:
+                        msgs=json.loads(raw)
+                    except Exception:
+                        continue
+                    if not isinstance(msgs, list): msgs=[msgs]
+                    for m in msgs:
+                        t=m.get("T")
+                        if t=="q":
+                            sym=m.get("S")
+                            bid=f(m.get("bp"),0); ask=f(m.get("ap"),0)
+                            price=(bid+ask)/2 if bid and ask else (ask or bid)
+                            if not sym or not price: continue
+                            mt=_parse_iso_epoch(m.get("t"))
+                            _LIVE_CACHE[sym]={"symbol":sym,"price":price,"bid":bid,"ask":ask,
+                                               "market_time":mt,"market_time_iso":m.get("t"),
+                                               "received_at":time.time(),"provider":"Alpaca WS"}
+                            _WS_STATE["last_message_at"]=time.time()
+                            if mt is not None:
+                                _record_health("alpaca", True, data_time=mt)
+                        elif t=="error":
+                            _WS_STATE["last_error"]=m.get("msg") or str(m)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            _WS_STATE["connected"]=False
+            _WS_STATE["last_error"]=str(e)
+            _WS_STATE["reconnects"]+=1
+            await asyncio.sleep(min(backoff, WS_MAX_BACKOFF_S))
+            backoff=min(backoff*2, WS_MAX_BACKOFF_S)
+
+@app.on_event("startup")
+async def _leonix_startup():
+    if ALPACA_KEY and ALPACA_SECRET and not _WS_STATE["started"]:
+        _WS_STATE["started"]=True
+        asyncio.create_task(alpaca_ws_loop())
+
+@app.get("/api/live/status")
+def live_status():
+    return {"configured":bool(ALPACA_KEY and ALPACA_SECRET),
+            "connected":_WS_STATE["connected"],
+            "last_message_at":_WS_STATE["last_message_at"],
+            "reconnects":_WS_STATE["reconnects"],
+            "last_error":_WS_STATE["last_error"],
+            "symbols_live":[s for s in MAGNIFICENT_7 if _live_quote(s)],
+            "note":"connected=true significa socket abierto; symbols_live son los que tienen dato de menos de 20s. Si el plan Alpaca no incluye WebSocket o la key es solo REST, esto queda en connected=false y LEONIX sigue funcionando por REST/polling."}
+
+@app.get("/api/live/quotes")
+def live_quotes():
+    return {"quotes":_LIVE_CACHE, "ws_connected":_WS_STATE["connected"]}
 
 @app.get("/api/data-hub/status")
 def data_hub_status():
@@ -214,15 +307,15 @@ def av(params):
         _record_health("alphavantage", False, error=e)
         raise
 
-@app.get("/")
+@app.api_route("/", methods=["GET","HEAD"])
 def home():
-    return {"ok":True,"service":"Contratos León API","version":"50.0","docs":"/docs"}
+    return {"ok":True,"service":"Contratos León API","version":"51.0","docs":"/docs"}
 
-@app.get("/health")
-@app.get("/api/health")
+@app.api_route("/health", methods=["GET","HEAD"])
+@app.api_route("/api/health", methods=["GET","HEAD"])
 def health():
     primary = "Alpaca" if (ALPACA_KEY and ALPACA_SECRET) else ("Twelve Data" if TD_KEY else "Alpha Vantage")
-    return {"ok":True,"version":"50.0","alpaca":bool(ALPACA_KEY and ALPACA_SECRET),
+    return {"ok":True,"version":"51.0","alpaca":bool(ALPACA_KEY and ALPACA_SECRET),
             "alpha_vantage":bool(AV_KEY),"twelve_data":bool(TD_KEY),
             "market_provider":primary,"options_provider":"Alpha Vantage",
             "alpha_daily":alpha_usage_state(),"data_hub":data_hub_snapshot()}
@@ -277,6 +370,9 @@ def quote(symbol:str):
     symbol=symbol.upper().strip()
     if symbol not in MAGNIFICENT_7:
         raise HTTPException(403,"Modo prueba: Contratos León está limitado a las Magníficas 7")
+    live=_live_quote(symbol)
+    if live:
+        return {**live, "change_pct":None}
     if ALPACA_KEY and ALPACA_SECRET:
         try:
             q=alpaca_quote(symbol)

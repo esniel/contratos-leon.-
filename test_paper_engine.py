@@ -6,7 +6,7 @@ bloqueo de Risk Shield 2.0 y el calendario de feriados NYSE.
 
 Uso: python3 test_paper_engine.py
 """
-import sys, types
+import sys, types, json
 from datetime import datetime, date
 
 # --- Stub mínimo de fastapi para poder importar leon_api sin instalarlo ---
@@ -25,6 +25,12 @@ class _FastAPI:
         def deco(f): return f
         return deco
     def post(self, *a, **kw):
+        def deco(f): return f
+        return deco
+    def api_route(self, *a, **kw):
+        def deco(f): return f
+        return deco
+    def on_event(self, *a, **kw):
         def deco(f): return f
         return deco
 
@@ -174,6 +180,75 @@ mc2 = L.market_clock_state()
 check("día hábil normal no se marca feriado", mc2["is_holiday_today"] is False)
 check("en horario y día normal el mercado está abierto", mc2["status"] == "open")
 L.datetime = datetime  # restaurar
+
+# ---------------------------------------------------------------------
+# 6) v51 Live Data Engine: caché en memoria, sin red real
+# ---------------------------------------------------------------------
+import time as _time
+L._LIVE_CACHE.clear()
+L._LIVE_CACHE["NVDA"]={"symbol":"NVDA","price":187.5,"bid":187.4,"ask":187.6,
+                        "market_time":_time.time()-5,"received_at":_time.time(),"provider":"Alpaca WS"}
+check("_live_quote devuelve dato fresco (<20s)", L._live_quote("NVDA") is not None)
+
+L._LIVE_CACHE["TSLA"]={"symbol":"TSLA","price":261.0,"bid":260.9,"ask":261.1,
+                        "market_time":_time.time()-120,"received_at":_time.time()-120,"provider":"Alpaca WS"}
+check("_live_quote descarta dato viejo (>20s)", L._live_quote("TSLA") is None)
+
+check("quote() usa el caché LIVE antes que REST cuando está fresco",
+      L.quote(symbol="NVDA")["provider"] == "Alpaca WS")
+
+epoch = L._parse_iso_epoch("2026-09-10T14:23:01.123456789Z")
+check("_parse_iso_epoch parsea timestamps con nanosegundos de Alpaca", epoch is not None and epoch > 0)
+check("_parse_iso_epoch devuelve None con basura en vez de reventar", L._parse_iso_epoch("no-es-fecha") is None)
+check("home() ya reporta la versión real 51.0 (antes decía 50.0 por descuido)", L.home()["version"] == "51.0")
+check("health() también reporta 51.0", L.health()["version"] == "51.0")
+
+
+import asyncio as _asyncio
+_orig_ws = L.websockets
+L.websockets = None
+L._WS_STATE.update({"connected":False,"last_error":None})
+_asyncio.run(L.alpaca_ws_loop())
+check("alpaca_ws_loop no revienta si falta 'websockets', deja el error explicado",
+      L._WS_STATE["last_error"] is not None and "websockets" in L._WS_STATE["last_error"])
+L.websockets = _orig_ws
+
+# Simulación de mensajes reales del WebSocket (sin red) para validar el parseo end-to-end
+class _FakeWSConn:
+    def __init__(self, messages):
+        self._messages = messages
+    async def send(self, msg): pass
+    async def recv(self): return json.dumps({"T":"success","msg":"authenticated"})
+    def __aiter__(self):
+        async def gen():
+            for m in self._messages:
+                yield m
+            raise ConnectionResetError("fake: conexión simulada cerrada tras el mensaje de prueba")
+        return gen()
+    async def __aenter__(self): return self
+    async def __aexit__(self, *a): return False
+
+class _FakeWSModule:
+    @staticmethod
+    def connect(url, **kw):
+        return _FakeWSConn([json.dumps([{"T":"q","S":"NVDA","bp":187.40,"ap":187.60,
+                                          "t":"2026-09-10T14:00:00.000000000Z"}])])
+
+L.ALPACA_KEY, L.ALPACA_SECRET = "fake", "fake"
+L.websockets = _FakeWSModule
+try:
+    _asyncio.run(_asyncio.wait_for(L.alpaca_ws_loop(), timeout=0.5))
+except _asyncio.TimeoutError:
+    pass  # esperado: el loop reconecta para siempre, lo cortamos tras procesar el mensaje
+
+live_nvda = L._LIVE_CACHE.get("NVDA")
+check("el loop parsea un mensaje de quote real y llena el caché", live_nvda is not None)
+check("el precio se calcula como mid de bid/ask", live_nvda and abs(live_nvda["price"] - 187.5) < 0.001)
+check("el market_time viene del timestamp del mensaje, no de time.time() local",
+      live_nvda and live_nvda["market_time"] is not None)
+L.websockets = _orig_ws
+L.ALPACA_KEY, L.ALPACA_SECRET = "", ""
+L._LIVE_CACHE.clear()
 
 # ---------------------------------------------------------------------
 print(f"\n{len(FAILS)} fallo(s)" if FAILS else "\nTodas las pruebas pasaron.")

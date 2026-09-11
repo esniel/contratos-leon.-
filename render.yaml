@@ -16,3 +16,5 @@ services:
         sync: false
       - key: TRADINGVIEW_WEBHOOK_SECRET
         sync: false
+      - key: ALPACA_WS_URL
+        sync: false
