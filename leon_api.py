@@ -12,7 +12,7 @@ except ImportError:
     websockets = None
 
 BASE = Path(__file__).resolve().parent
-VERSION = "53.0"
+VERSION = "54.0"
 NY = ZoneInfo("America/New_York")
 M7 = ["AAPL","MSFT","GOOGL","AMZN","NVDA","META","TSLA"]
 CRYPTO = ["BTC/USD","ETH/USD","SOL/USD","XRP/USD"]
