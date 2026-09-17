@@ -3,18 +3,14 @@ services:
     name: contratos-leon
     runtime: docker
     plan: free
-    dockerfilePath: ./Dockerfile
-    healthCheckPath: /health
     envVars:
-      - key: ALPHAVANTAGE_API_KEY
-        sync: false
-      - key: TWELVE_DATA_API_KEY
-        sync: false
       - key: ALPACA_KEY_ID
         sync: false
       - key: ALPACA_SECRET_KEY
         sync: false
-      - key: TRADINGVIEW_WEBHOOK_SECRET
+      - key: TWELVE_DATA_API_KEY
         sync: false
-      - key: ALPACA_WS_URL
+      - key: ALPHAVANTAGE_API_KEY
+        sync: false
+      - key: TRADINGVIEW_WEBHOOK_SECRET
         sync: false
