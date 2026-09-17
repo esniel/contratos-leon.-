@@ -12,7 +12,7 @@ except ImportError:
     websockets = None
 
 BASE = Path(__file__).resolve().parent
-VERSION = "52.0"
+VERSION = "52.1"
 NY = ZoneInfo("America/New_York")
 M7 = ["AAPL","MSFT","GOOGL","AMZN","NVDA","META","TSLA"]
 CRYPTO = ["BTC/USD","ETH/USD","SOL/USD","XRP/USD"]
@@ -331,6 +331,55 @@ def manager_status():
 def backtest_options():
     return {"method":"proxy_black_scholes","warning":"Proxy Black-Scholes; NO son opciones históricas reales.",
             "status":"available","version":VERSION}
+
+
+@app.get("/api/analysis")
+def analysis(symbol:str="NVDA", interval:str="5min", outputsize:int=120):
+    """Atomic symbol-bound analysis. Quote + candles + levels always belong to the same symbol."""
+    symbol=symbol.upper().replace("-","/")
+    if symbol not in M7+CRYPTO:
+        raise HTTPException(400,"Símbolo fuera del universo LEONIX v52.1")
+    q=quote(symbol)
+    if not TD_KEY:
+        return {"symbol":symbol,"quote":q,"candles":[],"technical":{"score":50,"trend":"NEUTRAL","rsi":None,
+                "support":None,"resistance":None},"risk":risk_shield(symbol,q=q,score=50),
+                "sync_ok":True,"warning":"Sin TWELVE_DATA_API_KEY: niveles no disponibles"}
+    r=requests.get("https://api.twelvedata.com/time_series",
+        params={"symbol":symbol,"interval":interval,"outputsize":min(max(outputsize,30),500),"apikey":TD_KEY},timeout=15)
+    d=r.json()
+    if d.get("status")=="error":
+        raise HTTPException(502,d.get("message","Twelve Data error"))
+    vals=list(reversed(d.get("values",[])))
+    candles=[{"time":v["datetime"],"open":float(v["open"]),"high":float(v["high"]),"low":float(v["low"]),
+              "close":float(v["close"]),"volume":float(v.get("volume") or 0)} for v in vals]
+    tech=technical_score(candles)
+    record("twelvedata",True)
+    risk=risk_shield(symbol,q=q,score=tech["score"])
+    # Sanity check: quote must be in a plausible envelope around recent candles.
+    sync_ok=True
+    if candles and q.get("price"):
+        lo=min(c["low"] for c in candles); hi=max(c["high"] for c in candles); px=float(q["price"])
+        sync_ok=(lo*.70 <= px <= hi*1.30)
+    if not sync_ok:
+        risk={"status":"RED","blocked":True,"decision":"NO TRADE",
+              "gates":risk.get("gates",[])+[{"name":"symbol_sync","status":"RED","detail":"Precio y velas no coinciden"}]}
+    return {"symbol":symbol,"quote":q,"candles":candles,"technical":tech,"risk":risk,
+            "sync_ok":sync_ok,"interval":interval,"provider_chart":"Twelve Data"}
+
+@app.get("/api/data-health-ui")
+def data_health_ui():
+    """UI-friendly health: a closed stock market is IDLE/CLOSED, not a false outage."""
+    snap=data_hub()
+    clock=market_clock()
+    providers=snap["providers"]
+    stock_state=providers.get("alpaca",{}).get("status","DOWN")
+    if not clock["open"] and stock_state=="DOWN" and WS["stocks"].get("connected"):
+        stock_state="MARKET CLOSED"
+    return {"overall":snap["overall"],"stocks":stock_state,
+            "crypto":providers.get("crypto",{}).get("status","DOWN"),
+            "twelvedata":providers.get("twelvedata",{}).get("status","DOWN"),
+            "alphavantage":providers.get("alphavantage",{}).get("status","DOWN"),
+            "stock_session":clock["session"],"ws":WS}
 
 @app.get("/api/system")
 def system():

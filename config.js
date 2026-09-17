@@ -1,1 +1,1 @@
-window.LEONIX_VERSION='52.0';
+window.LEONIX_VERSION='52.1';

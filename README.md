@@ -1,4 +1,4 @@
-# LEONIX v52 — Autonomous Paper/Shadow Engine
+# LEONIX v52.1 — Autonomous Paper/Shadow Engine
 
 ## Incluye
 - Dashboard `/` corregido: sirve `index.html` en UTF-8.
@@ -28,3 +28,10 @@ No guardar API keys en GitHub. Todo lo nuevo arranca en PAPER/SHADOW. `Consensus
 
 ## Verificación
 `python3 test_v52.py`
+
+## v52.1 Hotfix
+- Análisis atómico por símbolo: precio, velas, soporte y resistencia no pueden mezclarse.
+- `SYNC ERROR` fuerza NO TRADE.
+- El Robot ya no cambia silenciosamente el gráfico elegido por el usuario.
+- Data Health distingue MARKET CLOSED de caída real del feed de acciones.
+- UI rehecha tipo terminal/TradingView, con gráfico protagonista y panel Robot lateral.
