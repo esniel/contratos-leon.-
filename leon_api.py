@@ -12,7 +12,7 @@ except ImportError:
     websockets = None
 
 BASE = Path(__file__).resolve().parent
-VERSION = "55.0"
+VERSION = "56.0"
 NY = ZoneInfo("America/New_York")
 M7 = ["AAPL","MSFT","GOOGL","AMZN","NVDA","META","TSLA"]
 CRYPTO = ["BTC/USD","ETH/USD","SOL/USD","XRP/USD"]
@@ -37,17 +37,7 @@ HEALTH = {k:{"last_ok":None,"last_data":None,"latency_ms":None,"error":None}
           for k in ("alpaca","twelvedata","alphavantage","crypto")}
 ALERTS=[]
 DECISIONS=[]
-PAPER={"starting_cash":10000.0,"cash":10000.0,"realized":0.0,"positions":[],"trades":[],
-       "daily_loss_limit_pct":3.0,"max_position_pct":10.0,"day":None,"realized_today":0.0}
-def paper_daily_reset_if_needed():
-    today=datetime.now(NY).date().isoformat()
-    if PAPER.get("day")!=today:
-        PAPER["day"]=today; PAPER["realized_today"]=0.0
-def paper_daily_blocked():
-    paper_daily_reset_if_needed()
-    equity=PAPER["cash"]+sum(p["entry_cost"] for p in PAPER["positions"])
-    limit=-equity*(PAPER["daily_loss_limit_pct"]/100)
-    return PAPER["realized_today"]<=limit, round(PAPER["realized_today"],2), round(limit,2)
+PAPER={"starting_cash":10000.0,"cash":10000.0,"realized":0.0,"positions":[],"trades":[],"daily_loss_limit_pct":3.0,"max_position_pct":10.0}
 ROBOT={"enabled":True,"mode":"PAPER","state":"ESPERANDO","market":"AUTO","selected_market":"NO TRADE",
        "symbol":None,"reason":"Esperando datos confiables","updated_at":None,"profit_lock_stage":0}
 
@@ -173,8 +163,6 @@ async def ws_crypto():
 async def startup():
     if ALPACA_KEY and ALPACA_SECRET:
         asyncio.create_task(ws_stocks()); asyncio.create_task(ws_crypto())
-    asyncio.create_task(robot_loop())
-    asyncio.create_task(trade_manager_loop())
 
 @app.api_route("/",methods=["GET","HEAD"],include_in_schema=False)
 def home():
@@ -281,26 +269,6 @@ def market_selector():
                   "reason":"Selección objetiva por frescura/spread/sesión; no es garantía de beneficio.","updated_at":now()})
     return {"selected_market":selected,"best":best,"stocks":stocks,"crypto":cryptos,"robot":ROBOT}
 
-# --- Robot corriendo en segundo plano (no solo cuando alguien pregunta) ---
-ROBOT_LOOP_INTERVAL_S=30
-
-async def robot_loop():
-    while True:
-        try:
-            if ROBOT.get("enabled",True):
-                snap=market_selector()
-                DECISIONS.insert(0,{"at":now(),"selected_market":snap["selected_market"],
-                                     "best":snap["best"],"state":ROBOT["state"],"reason":ROBOT["reason"]})
-                del DECISIONS[200:]
-        except Exception as e:
-            pass
-        await asyncio.sleep(ROBOT_LOOP_INTERVAL_S)
-
-@app.get("/api/robot/decisions")
-def robot_decisions(limit:int=20):
-    return {"decisions":DECISIONS[:max(1,min(limit,200))],
-            "note":"Snapshot del escaneo automático cada 30s. No ejecuta nada: solo selecciona mercado/símbolo candidato."}
-
 @app.get("/api/robot/status")
 def robot_status(): return ROBOT
 @app.post("/api/robot/toggle")
@@ -319,29 +287,15 @@ async def paper_open(request:Request):
     d=await request.json(); symbol=str(d.get("symbol","")).upper(); side=str(d.get("side","CALL")).upper()
     qty=max(1,int(d.get("qty",1))); premium=float(d.get("premium",0))
     if premium<=0: raise HTTPException(409,"Falta premium real del contrato; LEONIX no inventa precio.")
-    blocked,realized_today,limit=paper_daily_blocked()
-    if blocked: raise HTTPException(423,f"NO TRADE: límite de pérdida diaria alcanzado ({realized_today} / {limit}). Se reinicia mañana.")
     cost=premium*100*qty*1.01 + .65*qty
     equity=PAPER["cash"]+sum(p["entry_cost"] for p in PAPER["positions"])
     if cost>equity*(PAPER["max_position_pct"]/100): raise HTTPException(400,"Risk Shield: posición >10% del equity")
     if cost>PAPER["cash"]: raise HTTPException(400,"Cash insuficiente")
     pos={"position_id":f"P{int(now()*1000)}","symbol":symbol,"side":side,"qty":qty,"entry_premium":premium,
-         "entry_cost":round(cost,2),"market_value":round(cost,2),"opened_at":now(),"state":"ACTIVE",
-         "profit_lock_stage":0,"peak_pnl_pct":0.0,"stop_pnl_pct":ATM_INITIAL_STOP_PCT,"managed":bool(d.get("managed",True))}
+         "entry_cost":round(cost,2),"market_value":round(cost,2),"opened_at":now(),"state":"ACTIVE","profit_lock_stage":0}
     PAPER["cash"]-=cost; PAPER["positions"].append(pos); PAPER["trades"].append({"event":"PAPER ENTRY ✓",**pos})
     ROBOT.update({"state":"ACTIVE","symbol":symbol,"reason":"PAPER ENTRY ✓","updated_at":now()})
     return {"ok":True,"position":pos,"paper":True}
-
-def _close_position(pos, premium, reason="MANUAL"):
-    proceeds=premium*100*pos["qty"]*.99-.65*pos["qty"]; pnl=proceeds-pos["entry_cost"]
-    PAPER["cash"]+=proceeds; PAPER["realized"]+=pnl
-    if pos in PAPER["positions"]: PAPER["positions"].remove(pos)
-    paper_daily_reset_if_needed(); PAPER["realized_today"]=round(PAPER["realized_today"]+pnl,2)
-    trade={"event":"EXIT","position_id":pos["position_id"],"symbol":pos["symbol"],"reason":reason,
-           "pnl":round(pnl,2),"closed_at":now()}
-    PAPER["trades"].append(trade)
-    ROBOT.update({"state":"EXIT","reason":f"{reason}: P/L ${pnl:.2f} en {pos['symbol']}","updated_at":now()})
-    return trade
 
 @app.post("/api/paper/options/close")
 async def paper_close(request:Request):
@@ -349,65 +303,11 @@ async def paper_close(request:Request):
     pos=next((p for p in PAPER["positions"] if p["position_id"]==pid),None)
     if not pos: raise HTTPException(404,"Posición no encontrada")
     if premium<=0: raise HTTPException(409,"Contrato sin precio actual; no se inventa precio de salida.")
-    trade=_close_position(pos, premium, reason="MANUAL")
-    return {"ok":True,"pnl":trade["pnl"],"realized":round(PAPER["realized"],2)}
-
-# --- Adaptive Trade Manager (TP1/TP2/TP3, Profit Lock, trailing, salida por tiempo) ---
-ATM_INITIAL_STOP_PCT=-50.0     # stop inicial: -50% de la prima pagada
-ATM_TP1_PCT=30.0               # al llegar aquí, sube el stop a breakeven (profit lock etapa 1)
-ATM_TP2_PCT=60.0               # sube el stop a +20% (profit lock etapa 2), activa trailing
-ATM_TP3_PCT=100.0              # toma ganancia total
-ATM_TRAIL_DROP_PCT=20.0        # en etapa 2+, sale si retrocede esto desde el máximo alcanzado
-ATM_MAX_HOLD_HOURS=6.0         # salida por tiempo: no mantener una posición día-trade más de esto
-ATM_LOOP_INTERVAL_S=20
-
-def _manage_one_position(pos):
-    if not pos.get("managed", True) or pos.get("state")!="ACTIVE": return None
-    try:
-        c=best_option_contract(pos["symbol"], pos["side"])
-    except Exception as e:
-        return {"position_id":pos["position_id"],"error":str(e)}
-    current=c["bid"] if c.get("bid") else c.get("mid")
-    if not current: return None
-    pnl_pct=round((current-pos["entry_premium"])/pos["entry_premium"]*100,2)
-    pos["peak_pnl_pct"]=max(pos.get("peak_pnl_pct",pnl_pct), pnl_pct)
-    held_hours=(now()-pos["opened_at"])/3600
-    reason=None
-    if pnl_pct>=ATM_TP3_PCT:
-        reason="TP3 ✓"
-    elif pos.get("profit_lock_stage",0)>=2 and pnl_pct<=pos["peak_pnl_pct"]-ATM_TRAIL_DROP_PCT:
-        reason="TRAILING STOP"
-    elif pnl_pct<=pos.get("stop_pnl_pct",ATM_INITIAL_STOP_PCT):
-        reason="STOP" if pos.get("profit_lock_stage",0)==0 else "PROFIT LOCK STOP"
-    elif held_hours>=ATM_MAX_HOLD_HOURS:
-        reason="TIME EXIT"
-    else:
-        if pnl_pct>=ATM_TP2_PCT and pos.get("profit_lock_stage",0)<2:
-            pos["profit_lock_stage"]=2; pos["stop_pnl_pct"]=20.0
-        elif pnl_pct>=ATM_TP1_PCT and pos.get("profit_lock_stage",0)<1:
-            pos["profit_lock_stage"]=1; pos["stop_pnl_pct"]=0.0
-    pos["last_pnl_pct"]=pnl_pct; pos["last_checked_at"]=now()
-    if reason:
-        trade=_close_position(pos, current, reason=reason)
-        return {"position_id":trade["position_id"],"closed":True,"reason":reason,"pnl":trade["pnl"]}
-    return {"position_id":pos["position_id"],"closed":False,"pnl_pct":pnl_pct,
-            "profit_lock_stage":pos.get("profit_lock_stage",0),"stop_pnl_pct":pos.get("stop_pnl_pct")}
-
-async def trade_manager_loop():
-    while True:
-        try:
-            for pos in list(PAPER["positions"]):
-                _manage_one_position(pos)
-        except Exception:
-            pass
-        await asyncio.sleep(ATM_LOOP_INTERVAL_S)
-
-@app.get("/api/adaptive-manager/stages")
-def manager_stages():
-    return {"initial_stop_pct":ATM_INITIAL_STOP_PCT,"tp1_pct":ATM_TP1_PCT,"tp2_pct":ATM_TP2_PCT,"tp3_pct":ATM_TP3_PCT,
-            "trailing_drop_pct":ATM_TRAIL_DROP_PCT,"max_hold_hours":ATM_MAX_HOLD_HOURS,
-            "positions":[{**p} for p in PAPER["positions"]],
-            "note":"TP1 sube el stop a breakeven, TP2 lo sube a +20% y activa trailing, TP3 toma ganancia total. Se revisa cada 20s en el servidor."}
+    proceeds=premium*100*pos["qty"]*.99-.65*pos["qty"]; pnl=proceeds-pos["entry_cost"]
+    PAPER["cash"]+=proceeds; PAPER["realized"]+=pnl; PAPER["positions"].remove(pos)
+    PAPER["trades"].append({"event":"EXIT","position_id":pid,"pnl":round(pnl,2),"closed_at":now()})
+    ROBOT.update({"state":"EXIT","reason":f"Paper exit P/L ${pnl:.2f}","updated_at":now()})
+    return {"ok":True,"pnl":round(pnl,2),"realized":round(PAPER["realized"],2)}
 
 @app.post("/api/tradingview/webhook")
 async def tv_webhook(request:Request):
@@ -424,65 +324,8 @@ def tv_alerts(): return {"alerts":ALERTS}
 @app.get("/api/adaptive-manager/status")
 def manager_status():
     return {"robot":ROBOT,"positions":PAPER["positions"],
-            "stages":["ENTRY",f"STOP {ATM_INITIAL_STOP_PCT}%",f"TP1 {ATM_TP1_PCT}%→breakeven",
-                      f"TP2 {ATM_TP2_PCT}%→+20% stop",f"TRAILING -{ATM_TRAIL_DROP_PCT}%",f"TP3 {ATM_TP3_PCT}%"],
-            "note":"Gestor adaptativo real, revisado cada 20s en el servidor (trade_manager_loop). PAPER/SHADOW. Live Trading desactivado."}
-
-# --- Opciones reales (Alpha Vantage REALTIME_OPTIONS) --------------------
-# v55 había perdido esto: paper_options_open aceptaba cualquier "premium" que
-# le mandaran, sin una fuente de verdad detrás. Esto le da una.
-_OPT_CACHE={}
-OPT_CACHE_TTL=45
-
-def _option_chain_raw(symbol):
-    if not AV_KEY: raise HTTPException(503,"ALPHAVANTAGE_API_KEY no configurada")
-    r=requests.get("https://www.alphavantage.co/query",
-        params={"function":"REALTIME_OPTIONS","symbol":symbol,"require_greeks":"true","apikey":AV_KEY},timeout=20)
-    d=r.json()
-    raw=d.get("data") or d.get("options") or []
-    if not raw:
-        msg=d.get("Note") or d.get("Information") or "REALTIME_OPTIONS no devolvió contratos"
-        raise HTTPException(502,str(msg))
-    record("alphavantage",True)
-    return raw
-
-def best_option_contract(symbol, side="CALL"):
-    """Elige el contrato más líquido y cercano al dinero (ATM) para el lado pedido.
-    Nunca inventa un precio: si no hay contratos con bid/ask utilizables, falla explícito."""
-    key=f"{symbol}:{side}"
-    c=_OPT_CACHE.get(key)
-    if c and now()-c["ts"]<OPT_CACHE_TTL:
-        return c["data"]
-    q=quote(symbol); spot=float(q.get("price") or 0)
-    opt_type="call" if side.upper()=="CALL" else "put"
-    chain=[o for o in _option_chain_raw(symbol) if str(o.get("type","")).lower()==opt_type]
-    usable=[]
-    for o in chain:
-        bid=float(o.get("bid") or 0); ask=float(o.get("ask") or 0)
-        if bid<=0 or ask<=0: continue
-        try: strike=float(o.get("strike"))
-        except (TypeError,ValueError): continue
-        usable.append({**o,"bid":bid,"ask":ask,"strike":strike})
-    if not usable:
-        raise HTTPException(502,f"Sin contratos {opt_type} con bid/ask utilizable para {symbol}")
-    usable.sort(key=lambda o: abs(o["strike"]-spot))
-    best=usable[0]
-    mid=round((best["bid"]+best["ask"])/2,4)
-    out={"symbol":symbol,"side":side.upper(),"strike":best["strike"],"expiration":best.get("expiration"),
-         "bid":best["bid"],"ask":best["ask"],"mid":mid,
-         "iv":float(best.get("implied_volatility") or 0) or None,
-         "delta":float(best.get("delta") or 0) or None,"theta":float(best.get("theta") or 0) or None,
-         "gamma":float(best.get("gamma") or 0) or None,"vega":float(best.get("vega") or 0) or None,
-         "open_interest":int(float(best.get("open_interest") or 0)),"volume":int(float(best.get("volume") or 0)),
-         "spot":spot,"provider":"Alpha Vantage REALTIME_OPTIONS"}
-    _OPT_CACHE[key]={"ts":now(),"data":out}
-    return out
-
-@app.get("/api/options/quote")
-def options_quote(symbol:str="NVDA", side:str="CALL"):
-    symbol=symbol.upper().strip()
-    if symbol not in M7: raise HTTPException(400,"Opciones solo disponibles para el universo M7")
-    return best_option_contract(symbol, side)
+            "stages":["ENTRY","INITIAL STOP","TP1","PROFIT LOCK","TP2","TRAILING","TP3/EXIT"],
+            "note":"v52: gestor adaptativo en PAPER/SHADOW. Live Trading desactivado."}
 
 @app.get("/api/backtest/options")
 def backtest_options():

@@ -1,396 +1,91 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>LEONIX v55</title><style>
-*{box-sizing:border-box}
-body{margin:0;background:#070b11;color:#eef3f8;font-family:Arial,sans-serif}
-a{color:inherit}
-.top{height:58px;border-bottom:1px solid #202936;display:flex;align-items:center;gap:14px;padding:0 16px;position:sticky;top:0;background:#070b11;z-index:20}
-.lion{font-size:26px}
-.brand{font-weight:900;letter-spacing:2px;color:#d6a73a;font-size:15px}
-.tagline{font-size:9px;color:#8390a0;letter-spacing:1px}
-.nav{display:flex;gap:4px;margin-left:8px}
-.nav button{background:none;border:none;color:#8390a0;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer}
-.nav button.on{background:#171f2b;color:#d6a73a}
-.spacer{margin-left:auto}
-.paperchip{background:#0d1a12;border:1px solid #184a2c;color:#25d58a;font-size:12px;padding:6px 12px;border-radius:999px;white-space:nowrap}
-.sync{font-size:11px;padding:4px 9px;border-radius:999px;margin-left:10px}
-.sync.live{color:#25d58a;background:#0d1a12}
-.sync.err{color:#ff5c68;background:#1a0d10}
-.sync.wait{color:#f2c14e;background:#181206}
-.menubtn{display:none;background:none;border:1px solid #293646;color:#dce5ee;border-radius:8px;padding:6px 10px;margin-left:8px}
-.wrap{max-width:1400px;margin:auto;padding:14px}
-.bar,.card{background:#0d131c;border:1px solid #202936;border-radius:14px}
-.bar{padding:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.bar button,.bar select{background:#131c28;color:#dce5ee;border:1px solid #293646;border-radius:9px;padding:9px 12px;font-size:13px}
-.bar button.on{background:#7a5a12;color:#fff2d1;border-color:#a3781c}
-.grid{display:grid;grid-template-columns:210px minmax(0,1fr) 300px;gap:12px;margin-top:12px}
-.card{padding:14px}
-.title{font-size:12px;color:#8492a3;text-transform:uppercase;letter-spacing:1px}
-.price{font-size:30px;font-weight:800;margin:5px 0}
-.chg{font-size:14px;font-weight:700}
-.chart{height:440px;position:relative;overflow:hidden}
-.chart canvas{width:100%;height:100%}
-.levels{position:absolute;left:12px;right:12px;top:45px;bottom:15px;pointer-events:none}
-.level{position:absolute;left:0;right:0;border-top:1px dashed #566;font-size:10px}
-.level span{float:right;background:#111927;padding:2px 5px}
-.row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #1d2632;padding:11px 0;font-size:13px}
-.row:last-child{border-bottom:none}
-.good{color:#2bd990}.bad{color:#ff5c68}.wait{color:#f2c14e}
-.foot{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
-.metric{padding:13px}.metric b{display:block;font-size:18px;margin-top:5px}
-.wl{display:flex;flex-direction:column;gap:2px;padding:6px}
-.wl button{background:none;border:none;color:#dce5ee;text-align:left;padding:9px 8px;border-radius:8px;display:flex;justify-content:space-between;font-size:13px;cursor:pointer}
-.wl button.on{background:#171f2b}
-.wl small{color:#8390a0;display:block}
-.confbar{height:8px;background:#182233;border-radius:99px;overflow:hidden;margin-top:6px}
-.confbar i{display:block;height:100%;background:linear-gradient(90deg,#f2c14e,#25d58a)}
-.buysell{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.buysell button{padding:12px;border-radius:10px;border:none;font-weight:800;font-size:14px;cursor:pointer}
-.buysell .buy{background:#1a9a5c;color:#fff}
-.buysell .sell{background:#c73a4a;color:#fff}
-.buysell button:disabled{opacity:.4;cursor:not-allowed}
-.note{font-size:11px;color:#8390a0;margin-top:8px;line-height:1.5}
-.scangrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.scancard{background:#0d131c;border:1px solid #202936;border-radius:12px;padding:12px}
-.scancard b{font-size:14px}
-.scancard .sc{font-size:20px;font-weight:800;margin:6px 0}
-.tradetable{width:100%;border-collapse:collapse;font-size:13px}
-.tradetable th{text-align:left;color:#8390a0;font-size:11px;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid #202936}
-.tradetable td{padding:8px;border-bottom:1px solid #1a222d}
-.view{display:none}
-.view.on{display:block}
-@media(max-width:960px){
-  .grid{grid-template-columns:1fr}
-  .nav{display:none}
-  .menubtn{display:inline-block}
-  .nav.mobopen{display:flex;flex-direction:column;position:fixed;top:58px;left:0;right:0;background:#0d131c;border-bottom:1px solid #202936;padding:8px;z-index:19}
-  .chart{height:340px}
-  .foot{grid-template-columns:1fr 1fr}
-  .wrap{padding:9px}
-  .top{padding:0 10px}
-  .price{font-size:24px}
-  .paperchip{display:none}
-}
-</style></head><body>
-
-<div class="top">
-  <button class="menubtn" id="menubtn" onclick="toggleNav()" aria-label="Menú">☰</button>
-  <div class="lion">🦁</div>
-  <div><div class="brand">LEONIX</div><div class="tagline">TRADING INTELLIGENCE 24/7</div></div>
-  <nav class="nav" id="nav">
-    <button id="navTrading" class="on" onclick="setView('trading')">Trading</button>
-    <button id="navScanner" onclick="setView('scanner')">Scanner</button>
-    <button id="navPortfolio" onclick="setView('portfolio')">Portafolio</button>
-  </nav>
-  <div class="spacer"></div>
-  <span class="paperchip" id="paperchip">Paper $10,000.00</span>
-  <span class="sync wait" id="sync">● CONECTANDO</span>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050a10">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>LEONIX v56</title>
+<style>
+:root{--bg:#05090f;--panel:#0a111b;--panel2:#0d1622;--line:#1d2b3b;--muted:#7f91a8;--text:#eef4fb;--blue:#1188ff;--green:#18d991;--red:#ff4d5d;--gold:#e8b64d;--yellow:#f4c552;--cyan:#34d6ff}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 78% 12%,#0a2032 0,#05090f 26%,#03070b 72%);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,select,input{font:inherit}button{cursor:pointer}.app{min-height:100vh}.topbar{height:72px;display:flex;align-items:center;border-bottom:1px solid var(--line);padding:0 18px;gap:18px;position:sticky;top:0;background:rgba(5,9,15,.94);backdrop-filter:blur(16px);z-index:40}.brand{display:flex;align-items:center;gap:10px;min-width:250px}.brandmark{width:46px;height:46px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#1b1305,#111827);border:1px solid #6c5121;font-size:30px;box-shadow:0 0 28px rgba(232,182,77,.14)}.brandname{font-size:24px;line-height:1;font-weight:900;letter-spacing:1px;color:#f1c363}.brandname small{font-size:13px;color:#f1c363}.sub{font-size:9px;color:#9aabbf;letter-spacing:1.7px;margin-top:4px}.nav{display:flex;align-items:stretch;height:100%;gap:2px}.nav button{border:0;background:transparent;color:#9fb0c4;padding:0 16px;border-bottom:2px solid transparent}.nav button.active{color:#fff;border-color:var(--blue);background:linear-gradient(180deg,rgba(17,136,255,.14),transparent)}.account{margin-left:auto;display:flex;align-items:center;gap:10px}.paper{background:#071912;border:1px solid #176b50;border-radius:11px;padding:9px 14px;min-width:160px}.paper small{display:block;color:var(--green);font-size:10px;font-weight:700}.paper b{font-size:18px}.user{width:38px;height:38px;border-radius:50%;background:#0d6efd;display:grid;place-items:center;font-weight:800}.shell{display:grid;grid-template-columns:190px minmax(0,1fr);max-width:1600px;margin:auto}.sidebar{border-right:1px solid var(--line);padding:16px 10px;min-height:calc(100vh - 72px);position:sticky;top:72px;align-self:start}.search{width:100%;background:#0a1320;border:1px solid var(--line);color:#dce7f4;border-radius:9px;padding:10px}.sectionlabel{font-size:10px;color:#617389;text-transform:uppercase;letter-spacing:1.4px;margin:18px 8px 8px}.sidebtn{width:100%;border:0;background:transparent;color:#b9c6d5;padding:10px 9px;border-radius:8px;text-align:left;display:flex;align-items:center;gap:8px}.sidebtn:hover,.sidebtn.active{background:#0d315d;color:#fff}.watch{margin-top:7px;border-top:1px solid #152131}.watchrow{padding:9px 5px;border-bottom:1px solid #101a26;display:grid;grid-template-columns:1fr auto;gap:8px;cursor:pointer}.watchrow:hover{background:#09131f}.watchrow b{font-size:12px}.watchrow span{font-size:11px;color:var(--muted)}.up{color:var(--green)!important}.down{color:var(--red)!important}.content{padding:14px}.tradegrid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:12px}.panel{background:linear-gradient(180deg,rgba(11,20,31,.97),rgba(6,12,20,.98));border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 45px rgba(0,0,0,.14)}.chartpanel{overflow:hidden}.symbolhead{display:flex;align-items:center;gap:12px;padding:14px 15px;border-bottom:1px solid var(--line)}.symicon{width:42px;height:42px;border-radius:10px;background:#070b11;border:1px solid #27415d;display:grid;place-items:center;font-weight:900;color:var(--gold)}.symmeta h1{font-size:22px;margin:0}.symmeta small{color:#8fa1b5}.bigprice{margin-left:auto;text-align:right}.bigprice b{font-size:28px}.bigprice small{display:block;color:var(--green);font-weight:700}.market{margin-left:14px;text-align:right;font-size:11px}.market strong{display:block;color:#dfe8f2;margin-bottom:4px}.market span{color:var(--green)}.tfbar{padding:8px 12px;display:flex;justify-content:flex-end;gap:5px;border-bottom:1px solid #122030}.tfbar button{background:#101a27;color:#a8b7c8;border:1px solid #17273a;border-radius:7px;padding:7px 11px;font-size:11px}.tfbar button.active{background:#0d5cc4;color:#fff;border-color:#1e77df}.chartwrap{height:430px;position:relative;background:linear-gradient(180deg,#07101a,#050b12)}canvas{width:100%;height:100%;display:block}.indicators{position:absolute;top:14px;left:14px;z-index:2;font-size:11px;line-height:1.8;color:#b7c4d2}.indicators b:nth-child(1){color:#2db8ff}.indicators b:nth-child(3){color:#ff9b35}.radar{position:absolute;width:120px;height:120px;border-radius:50%;border:1px solid rgba(24,217,145,.55);box-shadow:0 0 40px rgba(24,217,145,.14), inset 0 0 35px rgba(24,217,145,.10);display:none;pointer-events:none;transform:translate(-50%,-50%)}.radar:before,.radar:after{content:"";position:absolute;border:1px solid rgba(24,217,145,.45);border-radius:50%;inset:23px}.radar:after{inset:43px;background:rgba(24,217,145,.25);box-shadow:0 0 20px var(--green)}.radar.on{display:block}.charttools{height:48px;border-top:1px solid var(--line);display:flex;align-items:center;gap:20px;padding:0 15px;font-size:11px;color:#9eafc2}.charttools button{background:transparent;border:0;color:#aebed0}.aipanel{padding:14px;position:relative;overflow:hidden;min-height:555px}.aititle{display:flex;align-items:center;gap:10px}.ailion{width:42px;height:42px;border-radius:12px;background:#191204;border:1px solid #735820;display:grid;place-items:center;font-size:25px}.aititle h2{font-size:19px;margin:0}.activepill{margin-left:auto;color:var(--green);font-size:10px;font-weight:800;background:#092a20;border:1px solid #136a4b;border-radius:999px;padding:5px 9px}.aiexplain{margin-top:12px;padding:12px;background:linear-gradient(135deg,#0e2b4d,#091727);border:1px solid #1f5790;border-radius:10px;color:#e5eef7;font-size:12px;line-height:1.5}.aiface{margin:12px auto 6px;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle at 50% 40%,#264c6a 0,#0e1e2b 40%,#080d14 70%);border:1px solid #3b5e78;display:grid;place-items:center;font-size:78px;filter:saturate(.7);box-shadow:0 0 50px rgba(17,136,255,.14)}.signalbox{border:1px solid #145d4a;background:#081a15;border-radius:11px;padding:12px;margin-top:6px}.signalrow{display:flex;justify-content:space-between;align-items:center}.signal{font-size:21px;font-weight:900}.signal.buy{color:var(--green)}.signal.wait{color:var(--yellow)}.signal.block{color:var(--red)}.meter{height:7px;background:#132130;border-radius:99px;overflow:hidden;margin:8px 0}.meter i{display:block;height:100%;width:50%;background:linear-gradient(90deg,#12b97e,#37e9ac);border-radius:99px}.plan{font-size:12px}.planrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #14241f;color:#9db0c3}.planrow b{color:#eef4fb}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.actions button{border:0;border-radius:9px;padding:12px;font-weight:900;color:#fff}.scanbtn{background:linear-gradient(#1ee397,#08ad6e)}.pausebtn{background:linear-gradient(#f75a62,#d92b37)}.riskbox{margin-top:11px;padding:10px;border:1px solid var(--line);border-radius:10px}.riskhead{display:flex;justify-content:space-between;font-size:11px}.riskstatus{font-weight:900}.riskstatus.green{color:var(--green)}.riskstatus.yellow{color:var(--yellow)}.riskstatus.red{color:var(--red)}.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}.mini div{background:#07111b;border:1px solid #142535;border-radius:8px;padding:8px}.mini small{display:block;color:#71859b;font-size:9px}.mini b{font-size:11px}.lower{display:grid;grid-template-columns:1.05fr 1.15fr 1.2fr;gap:12px;margin-top:12px}.lower .panel{padding:13px;min-height:200px}.paneltitle{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:800;margin-bottom:8px}.paneltitle button{background:transparent;border:0;color:#2b9cff;font-size:10px}.statrow,.oprow,.scannerrow,.healthrow{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 0;border-bottom:1px solid #13202d;font-size:11px}.oprow{grid-template-columns:1fr auto auto}.scannerrow{grid-template-columns:1fr auto auto}.tag{font-size:9px;border-radius:999px;padding:3px 7px;background:#11202d}.empty{color:#75879a;font-size:11px;padding:20px 4px}.footer{border-top:1px solid var(--line);margin-top:12px;padding:10px 14px;display:flex;gap:22px;align-items:center;color:#8294a7;font-size:10px}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px}.quote{margin-left:auto}.mobilebar{display:none}.modal{position:fixed;inset:0;background:rgba(1,4,8,.72);display:none;place-items:center;z-index:100}.modal.on{display:grid}.modalbox{width:min(430px,92vw);background:#0a121d;border:1px solid #26384c;border-radius:14px;padding:18px}.modalbox h3{margin:0 0 12px}.modalbox button{width:100%;padding:11px;background:#0e60c9;border:0;color:#fff;border-radius:9px;margin-top:12px}
+@media(max-width:1100px){.sidebar{display:none}.shell{grid-template-columns:1fr}.nav button{padding:0 9px}.brand{min-width:auto}.tradegrid{grid-template-columns:minmax(0,1fr) 300px}}
+@media(max-width:760px){body{padding-bottom:74px}.topbar{height:60px;padding:0 10px}.brandname{font-size:19px}.brandmark{width:38px;height:38px;font-size:24px}.sub,.nav,.user{display:none}.paper{min-width:130px;padding:7px 10px}.paper b{font-size:15px}.content{padding:8px}.tradegrid{grid-template-columns:1fr}.chartwrap{height:355px}.symbolhead{padding:11px}.bigprice b{font-size:22px}.market{display:none}.tfbar{justify-content:flex-start;overflow:auto}.aipanel{min-height:0}.aiface{width:80px;height:80px;font-size:50px;float:right;margin:8px 0 6px 12px}.lower{grid-template-columns:1fr}.lower .panel{min-height:0}.footer{display:none}.mobilebar{display:grid;position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(6,11,18,.97);border-top:1px solid var(--line);grid-template-columns:repeat(5,1fr);z-index:50;padding-bottom:env(safe-area-inset-bottom)}.mobilebar button{border:0;background:transparent;color:#8293a6;font-size:9px}.mobilebar button b{display:block;font-size:18px;margin-bottom:2px}.mobilebar button.active{color:#2d9cff}.charttools{overflow:auto;gap:11px}.quote{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="brand"><div class="brandmark">🦁</div><div><div class="brandname">LEONIX <small>v56</small></div><div class="sub">TRADING INTELLIGENCE · PAPER/SHADOW</div></div></div>
+  <nav class="nav"><button class="active" onclick="showView('trading',this)">Trading</button><button onclick="showView('scanner',this)">Scanner</button><button onclick="focusAI(this)">IA León</button><button onclick="showView('portfolio',this)">Portafolio</button><button onclick="openSettings(this)">Configuración</button></nav>
+  <div class="account"><div class="paper"><small>PAPER TRADING</small><b id="paperEquity">$—</b></div><div class="user">E</div></div>
+</header>
+<div class="shell">
+<aside class="sidebar">
+  <input id="search" class="search" placeholder="Buscar símbolo…" onkeydown="if(event.key==='Enter')searchSymbol()">
+  <div class="sectionlabel">Mercados</div>
+  <button class="sidebtn active" onclick="setMarket('STOCKS',this)">▣ Acciones</button>
+  <button class="sidebtn" onclick="setMarket('CRYPTO',this)">◈ Criptomonedas</button>
+  <button class="sidebtn" onclick="showView('scanner')">⌁ Scanner automático</button>
+  <div class="sectionlabel">Mi lista</div><div class="watch" id="watch"></div>
+</aside>
+<main class="content">
+<section id="tradingView">
+<div class="tradegrid">
+  <section class="panel chartpanel">
+    <div class="symbolhead"><div class="symicon" id="symIcon">N</div><div class="symmeta"><h1 id="symName">NVDA</h1><small id="symSub">NVIDIA · análisis en vivo</small></div><div class="bigprice"><b id="price">—</b><small id="change">Datos reales al conectar</small></div><div class="market"><strong id="exchange">MERCADO</strong><span id="marketStatus">● comprobando…</span></div></div>
+    <div class="tfbar" id="tfbar"><button onclick="setTF('1min',this)">1m</button><button class="active" onclick="setTF('5min',this)">5m</button><button onclick="setTF('15min',this)">15m</button><button onclick="setTF('1h',this)">1h</button><button onclick="setTF('1day',this)">1D</button></div>
+    <div class="chartwrap"><div class="indicators" id="indicators">Tendencia <b>—</b><br>RSI <b>—</b><br>Volumen <b>—</b></div><canvas id="chart"></canvas><div class="radar" id="radar"></div></div>
+    <div class="charttools"><button onclick="toggleIndicatorInfo()">⌁ Indicadores</button><button onclick="toggleZones()">◇ Zonas</button><button onclick="scanNow()">◉ Escanear</button><button onclick="refreshAll()">↻ Sincronizar</button></div>
+  </section>
+  <aside class="panel aipanel" id="aiPanel">
+    <div class="aititle"><div class="ailion">🦁</div><div><h2>LEÓN IA</h2><small style="color:#7f91a8">Analizando el mercado…</small></div><span class="activepill" id="robotPill">● ACTIVO</span></div>
+    <div class="aiexplain" id="aiText">Esperando datos suficientes para explicar la oportunidad. LEONIX no fuerza operaciones.</div>
+    <div class="aiface">🦁</div>
+    <div class="signalbox"><div class="signalrow"><div><small style="color:#7d91a5">DECISIÓN ACTUAL</small><div class="signal wait" id="decision">WAIT</div></div><div style="text-align:right"><small style="color:#7d91a5">Calidad de señal</small><b id="score" style="display:block;font-size:18px">—/100</b></div></div><div class="meter"><i id="meter"></i></div>
+      <div class="plan"><div class="planrow"><span>Entrada técnica</span><b id="entry">—</b></div><div class="planrow"><span>Stop estructural</span><b id="stop">—</b></div><div class="planrow"><span>TP1 técnico</span><b id="tp1">—</b></div><div class="planrow"><span>Riesgo / Beneficio</span><b id="rr">—</b></div></div>
+    </div>
+    <div class="actions"><button class="scanbtn" onclick="scanNow()">Escanear ahora</button><button class="pausebtn" id="robotBtn" onclick="toggleRobot()">Pausar robot</button></div>
+    <div class="riskbox"><div class="riskhead"><span>RISK SHIELD</span><span class="riskstatus yellow" id="riskStatus">COMPROBANDO</span></div><div class="mini"><div><small>Tendencia</small><b id="trendMini">—</b></div><div><small>Sesión</small><b id="sessionMini">—</b></div><div><small>Datos</small><b id="dataMini">—</b></div></div></div>
+  </aside>
 </div>
-
-<div class="wrap">
-
-<!-- TRADING VIEW -->
-<div class="view on" id="view-trading">
-  <div class="bar">
-    <button id="stocks" class="on" onclick="market('STOCKS')">ACCIONES</button>
-    <button id="crypto" onclick="market('CRYPTO')">CRIPTO</button>
-    <select id="symbol" onchange="refresh()"><option>AAPL</option><option>MSFT</option><option>NVDA</option><option>AMZN</option><option>META</option><option>GOOGL</option><option>TSLA</option></select>
-    <button id="tf1" onclick="setTf('1min')">1m</button>
-    <button id="tf5" class="on" onclick="setTf('5min')">5m</button>
-    <button id="tf15" onclick="setTf('15min')">15m</button>
-    <button id="tf60" onclick="setTf('1hour')">1h</button>
-    <button onclick="refresh()">↻ SYNC</button>
-  </div>
-  <div class="grid">
-    <aside class="card" style="padding:8px">
-      <div class="title" style="padding:6px 8px 0">Watchlist</div>
-      <div class="wl" id="watchlist"></div>
-    </aside>
-    <main class="card">
-      <div class="title" id="symtitle">AAPL · GRÁFICO</div>
-      <div class="price" id="price">—</div>
-      <div class="chg" id="chg">—</div>
-      <div class="chart"><canvas id="cv"></canvas><div class="levels" id="levels"></div></div>
-    </main>
-    <aside>
-      <div class="card">
-        <div class="title">LEÓN IA</div>
-        <div class="row"><span>Estado</span><b id="state" class="wait">WAIT</b></div>
-        <div class="row"><span>Mercado seleccionado</span><b id="rmarket">—</b></div>
-        <div class="row"><span>Símbolo</span><b id="opp">—</b></div>
-        <div class="row" style="border:none;display:block"><span id="reason">Analizando…</span></div>
-        <div class="title" style="margin-top:10px">Confianza de señal</div>
-        <div class="confbar"><i id="confbarfill" style="width:0%"></i></div>
-        <div style="text-align:right;font-size:12px;color:#8390a0" id="conftext">—</div>
-        <div class="buysell">
-          <button class="buy" id="btnBuy" onclick="tradeAction('CALL')">↑ Comprar</button>
-          <button class="sell" id="btnSell" onclick="tradeAction('CLOSE')">↓ Vender</button>
-        </div>
-        <div class="note" id="tradenote">Comprar abre una posición Paper usando el contrato de opción real más cercano al dinero (Alpha Vantage). Vender cierra tu posición Paper abierta en este símbolo con el precio real actual.</div>
-      </div>
-      <div class="card" style="margin-top:12px">
-        <div class="title">RISK SHIELD</div>
-        <div class="row"><span>Estado</span><b id="shieldStatus" class="good">—</b></div>
-        <div class="row"><span>Live Trading</span><b class="bad">BLOQUEADO</b></div>
-        <div class="row"><span>Modo</span><b>PAPER</b></div>
-        <div id="shieldGates" style="margin-top:4px"></div>
-      </div>
-      <div class="card" style="margin-top:12px">
-        <div class="title">DATA HEALTH</div>
-        <div class="row"><span>Acciones</span><b id="healthStocks">—</b></div>
-        <div class="row"><span>Cripto</span><b id="healthCrypto">—</b></div>
-        <div class="row"><span>Sesión mercado</span><span id="session">—</span></div>
-        <div class="row"><span>Última actualización</span><span id="updated">—</span></div>
-      </div>
-    </aside>
-  </div>
-  <div class="foot">
-    <div class="card metric"><span class="title">ENTRY</span><b id="entry">—</b></div>
-    <div class="card metric"><span class="title">STOP</span><b id="stop">—</b></div>
-    <div class="card metric"><span class="title">TP1</span><b id="tp1">—</b></div>
-    <div class="card metric"><span class="title">TP2</span><b id="tp2">—</b></div>
-  </div>
+<div class="lower">
+ <section class="panel"><div class="paneltitle"><span>Resumen técnico</span><button onclick="refreshAll()">Actualizar</button></div><div class="statrow"><span>Precio</span><b id="sumPrice">—</b></div><div class="statrow"><span>Tendencia</span><b id="sumTrend">—</b></div><div class="statrow"><span>RSI</span><b id="sumRsi">—</b></div><div class="statrow"><span>Soporte</span><b id="sumSupport">—</b></div><div class="statrow"><span>Resistencia</span><b id="sumResistance">—</b></div></section>
+ <section class="panel" id="scannerPanel"><div class="paneltitle"><span>Scanner del Robot</span><button onclick="scanNow()">Escanear</button></div><div id="scannerRows" class="empty">Esperando escaneo…</div></section>
+ <section class="panel"><div class="paneltitle"><span>Operaciones Paper</span><button onclick="loadPaper()">Actualizar</button></div><div id="operations" class="empty">Cargando cuenta Paper…</div></section>
 </div>
-
-<!-- SCANNER VIEW -->
-<div class="view" id="view-scanner">
-  <div class="card">
-    <div class="title">Scanner LEONIX · Magníficas 7 + Cripto</div>
-    <p class="note" style="margin-top:6px">Selección objetiva por frescura de dato, spread y sesión — no es una promesa de ganancia. LEONIX escoge el mejor candidato entre estos, o NO TRADE si ninguno cumple.</p>
-    <div style="margin-top:12px" id="scanBest"></div>
-    <div class="title" style="margin-top:16px">Acciones</div>
-    <div class="scangrid" id="scanStocks" style="margin-top:8px"></div>
-    <div class="title" style="margin-top:16px">Cripto</div>
-    <div class="scangrid" id="scanCrypto" style="margin-top:8px"></div>
-  </div>
-  <div class="card" style="margin-top:12px">
-    <div class="title">Historial de decisiones (escaneo automático cada 30s)</div>
-    <table class="tradetable" style="margin-top:8px"><thead><tr><th>Hora</th><th>Mercado</th><th>Candidato</th><th>Score</th></tr></thead><tbody id="scanDecisions"></tbody></table>
-  </div>
+</section>
+<section id="portfolioView" style="display:none"><div class="panel" style="padding:18px"><div class="paneltitle"><span>Portafolio Paper / Shadow</span><button onclick="showView('trading')">Volver al gráfico</button></div><div id="portfolioBody" class="empty">Cargando…</div></div></section>
+</main>
 </div>
-
-<!-- PORTFOLIO VIEW -->
-<div class="view" id="view-portfolio">
-  <div class="foot" style="margin-top:0">
-    <div class="card metric"><span class="title">EQUITY</span><b id="pfEquity">—</b></div>
-    <div class="card metric"><span class="title">EFECTIVO</span><b id="pfCash">—</b></div>
-    <div class="card metric"><span class="title">P/L REALIZADO</span><b id="pfRealized">—</b></div>
-    <div class="card metric"><span class="title">P/L HOY</span><b id="pfToday">—</b></div>
-  </div>
-  <div class="card" style="margin-top:12px">
-    <div class="title">Journal · métricas reales</div>
-    <div id="pfMetrics" style="margin-top:6px"></div>
-  </div>
-  <div class="card" style="margin-top:12px">
-    <div class="title">Posiciones abiertas</div>
-    <table class="tradetable" style="margin-top:8px"><thead><tr><th>Símbolo</th><th>Lado</th><th>Cant.</th><th>Entrada</th><th>Costo</th><th>P/L actual</th><th>Etapa</th><th>Stop</th></tr></thead><tbody id="pfPositions"></tbody></table>
-  </div>
-  <div class="card" style="margin-top:12px">
-    <div class="title">Historial</div>
-    <table class="tradetable" style="margin-top:8px"><thead><tr><th>Evento</th><th>Detalle</th><th>P/L</th></tr></thead><tbody id="pfHistory"></tbody></table>
-  </div>
-</div>
-
-</div>
-
+<footer class="footer"><span><i class="dot"></i><b id="systemOnline">Sistema</b></span><span id="providerStatus">Datos: comprobando</span><span>🛡 Paper Trading / Live bloqueado</span><span class="quote">“Disciplina hoy, libertad mañana.” — LEONIX</span></footer>
+<nav class="mobilebar"><button class="active" onclick="showView('trading',this)"><b>⌂</b>Trading</button><button onclick="showView('scanner',this)"><b>⌁</b>Scanner</button><button onclick="focusAI(this)"><b>🦁</b>IA</button><button onclick="showView('portfolio',this)"><b>▤</b>Portafolio</button><button onclick="openSettings(this)"><b>⚙</b>Más</button></nav>
+<div class="modal" id="settingsModal" onclick="if(event.target===this)closeSettings()"><div class="modalbox"><h3>Configuración LEONIX</h3><div class="statrow"><span>Modo</span><b>PAPER / SHADOW</b></div><div class="statrow"><span>Live Trading</span><b class="down">BLOQUEADO</b></div><div class="statrow"><span>Kill Switch</span><b class="up">ACTIVO</b></div><div class="statrow"><span>Objetivo</span><b>Seguridad primero</b></div><p style="font-size:11px;color:#8194aa;line-height:1.5">Esta versión no inventa precios ni ejecuta operaciones con dinero real. El Robot puede esperar todo el tiempo que sea necesario.</p><button onclick="closeSettings()">Cerrar</button></div></div>
 <script>
-let kind='STOCKS', tf='5min', currentView='trading';
-const $=x=>document.getElementById(x);
-async function get(u){let r=await fetch(u,{cache:'no-store'});if(!r.ok){let e;try{e=(await r.json()).detail}catch(x){}throw Error(e||r.status)}return r.json()}
-async function post(u,body){let r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});let d;try{d=await r.json()}catch(e){d={}}if(!r.ok)throw Error(d.detail||r.status);return d}
-
-function toggleNav(){$('nav').classList.toggle('mobopen')}
-function setView(v){
-  currentView=v;
-  ['trading','scanner','portfolio'].forEach(x=>{
-    $('view-'+x).classList.toggle('on',x===v);
-    $('nav'+x[0].toUpperCase()+x.slice(1)).classList.toggle('on',x===v);
-  });
-  $('nav').classList.remove('mobopen');
-  if(v==='scanner') loadScanner();
-  if(v==='portfolio') loadPortfolio();
-}
-function setTf(v){tf=v;['tf1','tf5','tf15','tf60'].forEach(id=>$(id).classList.remove('on'));
-  ({'1min':'tf1','5min':'tf5','15min':'tf15','1hour':'tf60'})[v] && $(({'1min':'tf1','5min':'tf5','15min':'tf15','1hour':'tf60'})[v]).classList.add('on');
-  refresh()}
-function market(m){kind=m;$('stocks').classList.toggle('on',m==='STOCKS');$('crypto').classList.toggle('on',m==='CRYPTO');
-  $('symbol').innerHTML=m==='STOCKS'?'<option>AAPL</option><option>MSFT</option><option>NVDA</option><option>AMZN</option><option>META</option><option>GOOGL</option><option>TSLA</option>':'<option>BTC/USD</option><option>ETH/USD</option><option>SOL/USD</option><option>XRP/USD</option>';
-  updateTradeButtons();refresh();loadWatchlist()}
-
-function draw(c){let cv=$('cv'),dpr=devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;cv.width=w*dpr;cv.height=h*dpr;let x=cv.getContext('2d');x.scale(dpr,dpr);x.clearRect(0,0,w,h);if(!c||c.length<2)return;let vals=c.flatMap(a=>[+a.high,+a.low]).filter(Number.isFinite),mn=Math.min(...vals),mx=Math.max(...vals),pad=18,yy=v=>pad+(mx-v)/(mx-mn||1)*(h-pad*2),step=(w-pad*2)/c.length;x.strokeStyle='#263241';for(let i=1;i<5;i++){x.beginPath();x.moveTo(0,h*i/5);x.lineTo(w,h*i/5);x.stroke()}c.forEach((a,i)=>{let o=+a.open,cl=+a.close,hi=+a.high,lo=+a.low,xx=pad+i*step+step/2;x.strokeStyle=cl>=o?'#29d391':'#ff5964';x.beginPath();x.moveTo(xx,yy(hi));x.lineTo(xx,yy(lo));x.stroke();x.fillStyle=x.strokeStyle;x.fillRect(xx-Math.max(1,step*.28),Math.min(yy(o),yy(cl)),Math.max(2,step*.56),Math.max(1,Math.abs(yy(o)-yy(cl))))})}
-
-function levels(tech,p){
-  let sup=tech&&tech.support, res=tech&&tech.resistance;
-  $('entry').textContent=p?('$'+p.toFixed(2)):'—';
-  $('stop').textContent=sup?('$'+sup.toFixed(2)):'—';
-  $('tp1').textContent=res?('$'+res.toFixed(2)):'—';
-  $('tp2').textContent=(res&&p)?('$'+(res+(res-p)).toFixed(2)):'—';
-  return {entry:p,stop:sup,tp1:res,tp2:(res&&p)?(res+(res-p)):null};
-}
-
-function updateTradeButtons(){
-  let isStock = kind==='STOCKS';
-  $('btnBuy').disabled = !isStock;
-  $('btnSell').disabled = !isStock;
-  $('tradenote').textContent = isStock
-    ? 'Comprar abre una posición Paper usando el contrato de opción real más cercano al dinero (Alpha Vantage). Vender cierra tu posición Paper abierta en este símbolo con el precio real actual.'
-    : 'Paper trading de opciones sobre cripto: próximamente. Por ahora Comprar/Vender solo aplica a acciones.';
-}
-
-async function refresh(){
-  let s=$('symbol').value; $('symtitle').textContent=s+' · '+tf;
-  try{
-    let a=await get('/api/analysis?symbol='+encodeURIComponent(s)+'&interval='+tf);
-    let p=+(a.quote&&a.quote.price||0);
-    $('price').textContent=p?'$'+p.toFixed(2):'—';
-    $('chg').textContent=a.quote&&a.quote.provider?a.quote.provider:'';
-    draw(a.candles||[]);
-    levels(a.technical,p);
-    if(a.risk){
-      $('state').textContent=a.risk.blocked?'NO TRADE':(a.risk.decision||'WAIT');
-      $('state').className=a.risk.blocked?'bad':(a.risk.decision==='ARMED'?'good':'wait');
-      $('shieldStatus').textContent=a.risk.status||'—';
-      $('shieldStatus').className=a.risk.status==='GREEN'?'good':(a.risk.status==='RED'?'bad':'wait');
-      $('shieldGates').innerHTML=(a.risk.gates||[]).map(g=>
-        `<div class="row" style="padding:6px 0"><span style="text-transform:capitalize">${g.name}</span><b class="${g.status==='GREEN'?'good':g.status==='RED'?'bad':'wait'}">${g.status}</b></div>`
-      ).join('');
-    }
-    let score=(a.technical&&a.technical.score)||0;
-    $('confbarfill').style.width=Math.max(0,Math.min(100,score))+'%';
-    $('conftext').textContent=score?score+'%':'—';
-    $('sync').textContent=a.sync_ok===false?'● SYNC ERROR':'● EN VIVO';
-    $('sync').className='sync '+(a.sync_ok===false?'err':'live');
-    $('updated').textContent=new Date().toLocaleTimeString();
-  }catch(e){
-    $('sync').textContent='● DATA ERROR'; $('sync').className='sync err';
-    $('state').textContent='NO TRADE'; $('state').className='bad';
-  }
-  try{ let c=await get('/api/market/clock'); $('session').textContent=c.session; }catch(e){ $('session').textContent='—' }
-  try{
-    let h=await get('/api/data-health-ui');
-    let cls=x=>x==='LIVE'?'good':(x==='MARKET CLOSED'?'wait':(x==='DELAYED'?'wait':'bad'));
-    $('healthStocks').textContent=h.stocks; $('healthStocks').className=cls(h.stocks);
-    $('healthCrypto').textContent=h.crypto; $('healthCrypto').className=cls(h.crypto);
-  }catch(e){ $('healthStocks').textContent='—'; $('healthCrypto').textContent='—'; }
-}
-
-async function robot(){
-  try{
-    let r=await get('/api/market-selector');
-    let z=r.robot||{};
-    $('rmarket').textContent=r.selected_market||'—';
-    $('opp').textContent=z.symbol||'NINGUNA';
-    $('reason').textContent=z.reason||'Esperando señal válida';
-  }catch(e){}
-  try{
-    let acc=await get('/api/paper/options/account');
-    $('paperchip').textContent='Paper $'+Number(acc.equity||acc.cash||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-  }catch(e){}
-}
-
-async function loadWatchlist(){
-  let syms = kind==='STOCKS' ? ['AAPL','MSFT','NVDA','AMZN','META','GOOGL','TSLA'] : ['BTC/USD','ETH/USD','SOL/USD','XRP/USD'];
-  let rows = await Promise.all(syms.map(async s=>{
-    try{ let q=await get('/api/quote?symbol='+encodeURIComponent(s)); return {s,p:q.price}; }
-    catch(e){ return {s,p:null}; }
-  }));
-  $('watchlist').innerHTML = rows.map(r=>
-    `<button class="${r.s===$('symbol').value?'on':''}" onclick="selectSymbol('${r.s}')"><span>${r.s}</span><small>${r.p?('$'+Number(r.p).toFixed(2)):'—'}</small></button>`
-  ).join('');
-}
-function selectSymbol(s){
-  if(![...$('symbol').options].some(o=>o.value===s)){ let o=document.createElement('option'); o.value=s; o.textContent=s; $('symbol').appendChild(o); }
-  $('symbol').value=s; refresh(); loadWatchlist();
-}
-
-async function loadScanner(){
-  $('scanBest').innerHTML='Escaneando…';
-  try{
-    let r=await get('/api/market-selector');
-    let b=r.best;
-    $('scanBest').innerHTML = b
-      ? `<div class="card" style="background:#0d1a12;border-color:#184a2c"><div class="title">Mejor candidato ahora</div><div class="price" style="font-size:22px">${b.symbol}</div><div class="note">score ${b.score} · spread ${b.spread_pct}% · ${b.provider||''}</div></div>`
-      : `<div class="note">NO TRADE: ningún símbolo cumple las condiciones mínimas ahora mismo.</div>`;
-    $('scanStocks').innerHTML = (r.stocks||[]).map(x=>
-      `<div class="scancard"><b>${x.symbol}</b><div class="sc">${x.score!=null?x.score:'—'}</div><div class="note">${x.error?x.error:('spread '+x.spread_pct+'%')}</div></div>`
-    ).join('');
-    $('scanCrypto').innerHTML = (r.crypto||[]).map(x=>
-      `<div class="scancard"><b>${x.symbol}</b><div class="sc">${x.score!=null?x.score:'—'}</div><div class="note">${x.error?x.error:('spread '+x.spread_pct+'%')}</div></div>`
-    ).join('');
-  }catch(e){ $('scanBest').innerHTML='<div class="note">Error al escanear: '+e.message+'</div>'; }
-  try{
-    let d=await get('/api/robot/decisions?limit=15');
-    $('scanDecisions').innerHTML=(d.decisions||[]).map(x=>
-      `<tr><td>${new Date(x.at*1000).toLocaleTimeString()}</td><td>${x.selected_market}</td><td>${x.best?x.best.symbol:'—'}</td><td>${x.best?x.best.score:'—'}</td></tr>`
-    ).join('') || '<tr><td colspan="4" class="note">Todavía no hay decisiones registradas — el robot escanea cada 30s en el servidor.</td></tr>';
-  }catch(e){ $('scanDecisions').innerHTML='<tr><td colspan="4" class="note">Error: '+e.message+'</td></tr>'; }
-}
-
-async function loadPortfolio(){
-  try{
-    let acc=await get('/api/paper/options/account');
-    $('pfEquity').textContent='$'+Number(acc.equity||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-    $('pfCash').textContent='$'+Number(acc.cash||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-    $('pfRealized').textContent='$'+Number(acc.realized||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-    $('pfToday').textContent='$'+Number(acc.realized_today||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-    $('pfPositions').innerHTML=(acc.positions||[]).map(p=>{
-      let pnl=p.last_pnl_pct; let stage=p.profit_lock_stage||0;
-      let stageLabel=stage===0?'inicial':stage===1?'TP1 · breakeven':stage>=2?'TP2 · trailing':'—';
-      return `<tr><td>${p.symbol}</td><td>${p.side}</td><td>${p.qty}</td><td>$${Number(p.entry_premium).toFixed(2)}</td><td>$${Number(p.entry_cost).toFixed(2)}</td><td class="${pnl>0?'good':pnl<0?'bad':''}">${pnl!=null?pnl+'%':'—'}</td><td>${stageLabel}</td><td>${p.stop_pnl_pct!=null?p.stop_pnl_pct+'%':'—'}</td></tr>`;
-    }).join('') || '<tr><td colspan="8" class="note">Sin posiciones abiertas.</td></tr>';
-    $('pfHistory').innerHTML=(acc.trades||[]).slice().reverse().slice(0,25).map(t=>
-      `<tr><td>${t.reason||t.event||'—'}</td><td>${t.symbol||t.position_id||'—'}</td><td>${t.pnl!=null?('$'+Number(t.pnl).toFixed(2)):'—'}</td></tr>`
-    ).join('') || '<tr><td colspan="3" class="note">Sin historial todavía.</td></tr>';
-    let closed=(acc.trades||[]).filter(t=>t.pnl!=null);
-    let n=closed.length;
-    if(n===0){
-      $('pfMetrics').innerHTML='<div class="note">Todavía no hay operaciones cerradas — las métricas (win rate, profit factor) aparecen aquí una vez que haya una muestra real.</div>';
-    } else {
-      let wins=closed.filter(t=>t.pnl>0), losses=closed.filter(t=>t.pnl<=0);
-      let winRate=(wins.length/n*100).toFixed(1);
-      let grossWin=wins.reduce((s,t)=>s+t.pnl,0), grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pnl,0));
-      let pf=grossLoss>0?(grossWin/grossLoss).toFixed(2):(grossWin>0?'∞':'—');
-      let avgWin=wins.length?(grossWin/wins.length).toFixed(2):'0.00';
-      let avgLoss=losses.length?(grossLoss/losses.length).toFixed(2):'0.00';
-      $('pfMetrics').innerHTML=`
-        <div class="row"><span>Sample size</span><b>${n}${n<20?' (muestra pequeña, no saques conclusiones todavía)':''}</b></div>
-        <div class="row"><span>Win rate</span><b>${winRate}%</b></div>
-        <div class="row"><span>Profit factor</span><b>${pf}</b></div>
-        <div class="row"><span>Ganancia media</span><b class="good">$${avgWin}</b></div>
-        <div class="row"><span>Pérdida media</span><b class="bad">$${avgLoss}</b></div>`;
-    }
-  }catch(e){ $('pfPositions').innerHTML='<tr><td class="note">Error: '+e.message+'</td></tr>'; }
-}
-
-async function tradeAction(kind_){
-  let s=$('symbol').value;
-  if($('symbol').value && !['AAPL','MSFT','NVDA','AMZN','META','GOOGL','TSLA'].includes(s)){
-    alert('Comprar/Vender solo está disponible para acciones del universo M7 por ahora.'); return;
-  }
-  if(kind_==='CALL'){
-    try{
-      $('tradenote').textContent='Consultando contrato real…';
-      let opt=await get('/api/options/quote?symbol='+encodeURIComponent(s)+'&side=CALL');
-      if(!confirm(`Abrir CALL ${s} strike ${opt.strike} venc. ${opt.expiration}\nPrecio (mid real): $${opt.mid}\n¿Confirmar apertura Paper?`)) { $('tradenote').textContent='Cancelado.'; return; }
-      let r=await post('/api/paper/options/open',{symbol:s,side:'CALL',qty:1,premium:opt.mid});
-      $('tradenote').textContent=`Posición abierta: ${s} CALL strike ${opt.strike}, costo $${r.position.entry_cost}.`;
-      robot();
-    }catch(e){ $('tradenote').textContent='No se pudo abrir: '+e.message; }
-  } else {
-    try{
-      $('tradenote').textContent='Buscando posición abierta…';
-      let acc=await get('/api/paper/options/account');
-      let pos=(acc.positions||[]).find(p=>p.symbol===s);
-      if(!pos){ $('tradenote').textContent='No hay posición Paper abierta en '+s+'.'; return; }
-      let opt=await get('/api/options/quote?symbol='+encodeURIComponent(s)+'&side='+(pos.side||'CALL'));
-      let r=await post('/api/paper/options/close',{position_id:pos.position_id,premium:opt.mid});
-      $('tradenote').textContent=`Posición cerrada. P/L: $${r.pnl}.`;
-      robot();
-    }catch(e){ $('tradenote').textContent='No se pudo cerrar: '+e.message; }
-  }
-}
-
-updateTradeButtons();
-refresh(); robot(); loadWatchlist();
-setInterval(refresh,10000); setInterval(robot,10000);
-addEventListener('resize',()=>refresh());
-</script></body></html>
+const PREVIEW=new URLSearchParams(location.search).has('preview');
+let symbol='NVDA', marketType='STOCKS', interval='5min', lastAnalysis=null, robotEnabled=true, zonesOn=true;
+const STOCKS=['NVDA','AAPL','MSFT','AMZN','META','GOOGL','TSLA'], CRYPTO=['BTC/USD','ETH/USD','SOL/USD','XRP/USD'];
+const $=id=>document.getElementById(id); const money=v=>(Number.isFinite(+v)?'$'+(+v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—');
+const previewCandles=(()=>{let a=[],p=141.2;for(let i=0;i<70;i++){let drift=(i>38?.18:.05)+(Math.sin(i/4)*.12),o=p,p=Math.max(137,p+drift+(Math.random()-.5)*.65),c=p,h=Math.max(o,c)+Math.random()*.45,l=Math.min(o,c)-Math.random()*.45;a.push({time:i,open:o,high:h,low:l,close:c,volume:1000000+Math.random()*2800000})}return a})();
+function previewData(){let p=previewCandles.at(-1).close;return{symbol,quote:{price:p,bid:p-.03,ask:p+.03,provider:'PREVIEW'},candles:previewCandles,technical:{score:72,trend:'BULL',rsi:61.4,support:145.0,resistance:152.0},risk:{status:'GREEN',blocked:false,decision:'ARMED',gates:[{name:'datos',status:'GREEN'},{name:'spread',status:'GREEN'},{name:'sesión',status:'GREEN'}]},sync_ok:true,interval}}
+async function api(url,opt){if(PREVIEW){if(url.startsWith('/api/analysis'))return previewData();if(url==='/api/market-selector')return{selected_market:'ACCIONES',best:{symbol:'NVDA',score:84},stocks:STOCKS.map((s,i)=>({symbol:s,score:84-i*4,spread_pct:.08+i*.02})),crypto:CRYPTO.map((s,i)=>({symbol:s,score:70-i*3,spread_pct:.12+i*.03})),robot:{state:'ESCANEANDO',symbol:'NVDA',enabled:true,reason:'Preview visual'}};if(url==='/api/paper/account')return{starting_cash:10000,cash:9320,realized:145.2,positions:[{position_id:'P-DEMO',symbol:'NVDA',side:'CALL',qty:1,entry_cost:680,state:'ACTIVE'}],trades:[{event:'PAPER ENTRY ✓',symbol:'NVDA'}],equity:10000};if(url==='/api/data-health-ui')return{overall:'LIVE',stocks:'LIVE',crypto:'LIVE',twelvedata:'LIVE',stock_session:'REGULAR'};if(url==='/api/market/clock')return{open:true,session:'REGULAR'};if(url==='/api/robot/status')return{enabled:true,state:'ESCANEANDO',selected_market:'ACCIONES',symbol:'NVDA'};return{}}
+ let r=await fetch(url,{cache:'no-store',...opt});let d=await r.json();if(!r.ok)throw new Error(d.detail||r.status);return d}
+function renderWatch(){let arr=marketType==='STOCKS'?STOCKS:CRYPTO;$('watch').innerHTML=arr.map((s,i)=>`<div class="watchrow" onclick="selectSymbol('${s}')"><b>${s.replace('/','')}</b><span class="${i%4===3?'down':'up'}">${i%4===3?'-0.62%':'+'+(1.1+i*.37).toFixed(2)+'%'}</span></div>`).join('')}
+function setMarket(m,btn){marketType=m;document.querySelectorAll('.sidebtn').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');symbol=(m==='STOCKS'?'NVDA':'BTC/USD');renderWatch();refreshAll()}
+function searchSymbol(){let v=$('search').value.trim().toUpperCase();if(v){if(v==='BTC'||v==='ETH'||v==='SOL'||v==='XRP')v+='/USD';symbol=v;refreshAll()}}
+function selectSymbol(s){symbol=s;refreshAll()}
+function setTF(tf,btn){interval=tf;document.querySelectorAll('#tfbar button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');refreshAnalysis()}
+function draw(candles){let cv=$('chart'),box=cv.getBoundingClientRect(),dpr=devicePixelRatio||1;cv.width=box.width*dpr;cv.height=box.height*dpr;let x=cv.getContext('2d');x.scale(dpr,dpr);let w=box.width,h=box.height;x.clearRect(0,0,w,h);x.strokeStyle='#122131';x.lineWidth=1;for(let i=1;i<6;i++){x.beginPath();x.moveTo(0,h*i/6);x.lineTo(w,h*i/6);x.stroke()}for(let i=1;i<8;i++){x.beginPath();x.moveTo(w*i/8,0);x.lineTo(w*i/8,h);x.stroke()}if(!candles||candles.length<2)return;let cs=candles.slice(-90),vals=cs.flatMap(c=>[+c.low,+c.high]),mn=Math.min(...vals),mx=Math.max(...vals),pad=24,yy=v=>pad+(mx-v)/(mx-mn||1)*(h-pad*2),step=(w-pad*2)/cs.length;cs.forEach((c,i)=>{let o=+c.open,cl=+c.close,hi=+c.high,lo=+c.low,xx=pad+i*step+step/2,col=cl>=o?'#17d58d':'#ff4e5e';x.strokeStyle=col;x.beginPath();x.moveTo(xx,yy(hi));x.lineTo(xx,yy(lo));x.stroke();x.fillStyle=col;x.fillRect(xx-Math.max(1,step*.25),Math.min(yy(o),yy(cl)),Math.max(2,step*.5),Math.max(1,Math.abs(yy(o)-yy(cl))))});let last=cs.at(-1),ry=yy(+last.close),rx=pad+(cs.length-1)*step+step/2;$('radar').style.left=rx+'px';$('radar').style.top=ry+'px';$('radar').classList.toggle('on',zonesOn&&lastAnalysis?.risk?.decision==='ARMED')}
+function describe(a){let t=a.technical||{},r=a.risk||{},d=r.decision||'WAIT';if(r.blocked)return`Risk Shield está bloqueando la operación. ${gateText(r)} LEONIX permanece en NO TRADE.`;if(d==='ARMED')return`Oportunidad técnica detectada en ${a.symbol}. Tendencia ${t.trend==='BULL'?'alcista':'bajista'}, RSI ${t.rsi??'—'} y datos sincronizados. El sistema está armado, pero esto no garantiza beneficio.`;return`No hay confirmación suficiente en ${a.symbol}. El sistema sigue observando tendencia, volumen, spread y sesión. WAIT es una decisión válida.`}
+function gateText(r){let bad=(r.gates||[]).filter(g=>g.status==='RED').map(g=>g.name);return bad.length?'Bloqueos: '+bad.join(', ')+'.':''}
+function renderAnalysis(a){lastAnalysis=a;let q=a.quote||{},t=a.technical||{},r=a.risk||{},p=+q.price||0;$('symName').textContent=a.symbol||symbol;$('symIcon').textContent=(a.symbol||symbol).replace('/','')[0];$('symSub').textContent=(marketType==='CRYPTO'?'Cripto 24/7':'Análisis técnico en vivo');$('price').textContent=money(p);$('change').textContent=q.provider?`Proveedor: ${q.provider}`:'Datos sincronizados';$('sumPrice').textContent=money(p);$('sumTrend').textContent=t.trend||'—';$('sumRsi').textContent=t.rsi??'—';$('sumSupport').textContent=money(t.support);$('sumResistance').textContent=money(t.resistance);$('indicators').innerHTML=`Tendencia <b>${t.trend||'—'}</b><br>RSI <b>${t.rsi??'—'}</b><br>Score <b>${t.score??'—'}/100</b>`;$('score').textContent=(t.score??'—')+'/100';$('meter').style.width=Math.max(2,Math.min(100,t.score||0))+'%';let d=r.decision||'WAIT';$('decision').textContent=d;$('decision').className='signal '+(d==='ARMED'?'buy':d==='NO TRADE'?'block':'wait');$('riskStatus').textContent=r.status||'—';$('riskStatus').className='riskstatus '+String(r.status||'yellow').toLowerCase();$('trendMini').textContent=t.trend||'—';$('dataMini').textContent=a.sync_ok===false?'DESYNC':'OK';$('aiText').textContent=describe(a);let show=d==='ARMED'&&!r.blocked&&p;let stop=show?+t.support:0,tp=show?+t.resistance:0;$('entry').textContent=show?money(p):'—';$('stop').textContent=stop?money(stop):'—';$('tp1').textContent=tp?money(tp):'—';$('rr').textContent=(stop&&tp&&p&&p>stop)?'1:'+(Math.max(0,(tp-p)/(p-stop))).toFixed(1):'—';draw(a.candles||[])}
+async function refreshAnalysis(){try{let a=await api(`/api/analysis?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}&outputsize=140`);renderAnalysis(a)}catch(e){$('aiText').textContent='No se pudo cargar el análisis: '+e.message;$('decision').textContent='NO TRADE';$('decision').className='signal block';$('riskStatus').textContent='DATA ERROR';$('riskStatus').className='riskstatus red'}}
+async function scanNow(){try{let s=await api('/api/market-selector');let rows=[...(s.stocks||[]),...(s.crypto||[])].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,8);$('scannerRows').className='';$('scannerRows').innerHTML=rows.map((x,i)=>`<div class="scannerrow" onclick="selectSymbol('${x.symbol}');showView('trading')"><b>${i+1}. ${x.symbol}</b><span>${x.score??0}/100</span><span class="tag">spread ${x.spread_pct??'—'}%</span></div>`).join('');if(s.robot){$('robotPill').textContent='● '+(s.robot.enabled===false?'PAUSADO':'ACTIVO');robotEnabled=s.robot.enabled!==false}}catch(e){$('scannerRows').className='empty';$('scannerRows').textContent='Scanner no disponible: '+e.message}}
+async function loadPaper(){try{let p=await api('/api/paper/account');$('paperEquity').textContent=money(p.equity);let pos=p.positions||[],tr=p.trades||[];$('operations').className='';$('operations').innerHTML=pos.length?pos.map(x=>`<div class="oprow"><b>${x.symbol} ${x.side||''}</b><span>${x.state||'ACTIVE'}</span><span>${money(x.entry_cost)}</span></div>`).join(''):`<div class="empty">Sin posiciones Paper abiertas. LEONIX no fuerza entradas.</div>`;$('portfolioBody').innerHTML=`<div class="statrow"><span>Equity</span><b>${money(p.equity)}</b></div><div class="statrow"><span>Cash</span><b>${money(p.cash)}</b></div><div class="statrow"><span>P/L realizado</span><b class="${(+p.realized||0)>=0?'up':'down'}">${money(p.realized)}</b></div><div class="statrow"><span>Posiciones abiertas</span><b>${pos.length}</b></div><div class="statrow"><span>Eventos registrados</span><b>${tr.length}</b></div>`}catch(e){$('operations').textContent='Cuenta Paper no disponible: '+e.message}}
+async function loadHealth(){try{let h=await api('/api/data-health-ui');$('providerStatus').textContent=`Datos: ${h.overall||'—'} · Stocks ${h.stocks||'—'} · Crypto ${h.crypto||'—'}`;$('systemOnline').textContent=h.overall==='DOWN'?'Sistema con datos limitados':'Sistema online';$('sessionMini').textContent=h.stock_session||'—';$('marketStatus').textContent='● '+(marketType==='CRYPTO'?'24/7':h.stock_session||'—');$('marketStatus').style.color=h.overall==='DOWN'?'var(--red)':'var(--green)'}catch(e){$('providerStatus').textContent='Datos: ERROR';$('marketStatus').textContent='● DATA ERROR';$('marketStatus').style.color='var(--red)'}}
+async function toggleRobot(){try{robotEnabled=!robotEnabled;if(!PREVIEW)await api('/api/robot/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:robotEnabled})});$('robotBtn').textContent=robotEnabled?'Pausar robot':'Activar robot';$('robotPill').textContent='● '+(robotEnabled?'ACTIVO':'PAUSADO')}catch(e){robotEnabled=!robotEnabled}}
+function showView(v,btn){$('tradingView').style.display=v==='portfolio'?'none':'block';$('portfolioView').style.display=v==='portfolio'?'block':'none';document.querySelectorAll('.nav button,.mobilebar button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');if(v==='scanner'){showView('trading');setTimeout(()=>$('scannerPanel').scrollIntoView({behavior:'smooth',block:'center'}),50)}if(v==='portfolio')loadPaper()}
+function focusAI(btn){showView('trading');setTimeout(()=>$('aiPanel').scrollIntoView({behavior:'smooth',block:'center'}),50)}function openSettings(){$('settingsModal').classList.add('on')}function closeSettings(){$('settingsModal').classList.remove('on')}function toggleIndicatorInfo(){alert('Indicadores actuales: tendencia, RSI, soporte, resistencia y score técnico. Se calculan desde /api/analysis.')}function toggleZones(){zonesOn=!zonesOn;$('radar').classList.toggle('on',zonesOn&&lastAnalysis?.risk?.decision==='ARMED')}async function refreshAll(){await Promise.allSettled([refreshAnalysis(),scanNow(),loadPaper(),loadHealth()])}
+renderWatch();refreshAll();setInterval(()=>Promise.allSettled([refreshAnalysis(),loadHealth()]),12000);addEventListener('resize',()=>lastAnalysis&&draw(lastAnalysis.candles||[]));
+</script>
+</body></html>
