@@ -12,7 +12,7 @@ except ImportError:
     websockets = None
 
 BASE = Path(__file__).resolve().parent
-VERSION = "56.0"
+VERSION = "57.0"
 NY = ZoneInfo("America/New_York")
 M7 = ["AAPL","MSFT","GOOGL","AMZN","NVDA","META","TSLA"]
 CRYPTO = ["BTC/USD","ETH/USD","SOL/USD","XRP/USD"]
@@ -24,6 +24,7 @@ AV_KEY = os.getenv("ALPHAVANTAGE_API_KEY","").strip()
 TV_SECRET = os.getenv("TRADINGVIEW_WEBHOOK_SECRET","").strip()
 ALPACA_WS_URL = os.getenv("ALPACA_WS_URL","wss://stream.data.alpaca.markets/v2/iex").strip()
 ALPACA_CRYPTO_WS_URL = os.getenv("ALPACA_CRYPTO_WS_URL","wss://stream.data.alpaca.markets/v1beta3/crypto/us").strip()
+ALPACA_OPTIONS_FEED = os.getenv("ALPACA_OPTIONS_FEED","indicative").strip().lower() or "indicative"
 
 app = FastAPI(title="LEONIX Market Intelligence API", version=VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False,
@@ -275,6 +276,89 @@ def robot_status(): return ROBOT
 async def robot_toggle(request:Request):
     d=await request.json(); ROBOT["enabled"]=bool(d.get("enabled",True)); ROBOT["updated_at"]=now()
     return ROBOT
+
+
+
+def _occ_parts(contract_symbol):
+    """Parse a standard OCC option symbol into basic metadata."""
+    m=re.match(r"^([A-Z.]{1,6})(\d{6})([CP])(\d{8})$", str(contract_symbol or ""))
+    if not m: return {}
+    root, ymd, cp, strike=m.groups()
+    try:
+        exp=datetime.strptime(ymd,"%y%m%d").date()
+        dte=max(0,(exp-datetime.now(NY).date()).days)
+    except Exception:
+        exp=None; dte=None
+    return {"root":root,"expiration":exp.isoformat() if exp else None,"dte":dte,"type":"CALL" if cp=="C" else "PUT","strike":int(strike)/1000}
+
+def option_opportunity_scan(symbol, side="auto", limit=6):
+    """Rank actual Alpaca option snapshots by quote quality + delta fit + activity.
+    Score is a quality/ranking score, NOT probability of profit.
+    """
+    symbol=str(symbol or "").upper().replace("/","")
+    if not symbol or symbol in {x.replace('/','') for x in CRYPTO}:
+        return {"symbol":symbol,"status":"UNAVAILABLE","reason":"Las opciones se escanean sobre acciones, no cripto.","contracts":[]}
+    if not (ALPACA_KEY and ALPACA_SECRET):
+        return {"symbol":symbol,"status":"UNAVAILABLE","reason":"Alpaca no está configurado.","contracts":[]}
+    try:
+        uq=quote(symbol); underlying=float(uq.get("price") or 0)
+    except Exception as e:
+        return {"symbol":symbol,"status":"UNAVAILABLE","reason":f"Sin precio del subyacente: {e}","contracts":[]}
+    if underlying<=0:
+        return {"symbol":symbol,"status":"UNAVAILABLE","reason":"Precio del subyacente no disponible.","contracts":[]}
+    today=datetime.now(NY).date(); end=today+timedelta(days=30)
+    params={"feed":ALPACA_OPTIONS_FEED,"limit":350,"expiration_date_gte":today.isoformat(),"expiration_date_lte":end.isoformat(),
+            "strike_price_gte":round(underlying*.88,2),"strike_price_lte":round(underlying*1.12,2)}
+    side=(side or "auto").lower()
+    if side in ("call","put"): params["type"]=side
+    try:
+        r=requests.get(f"https://data.alpaca.markets/v1beta1/options/snapshots/{symbol}",headers=headers(),params=params,timeout=14)
+        if r.status_code>=400:
+            msg=(r.json().get("message") if 'application/json' in r.headers.get('content-type','') else r.text[:160])
+            return {"symbol":symbol,"status":"UNAVAILABLE","reason":f"Options data {r.status_code}: {msg}","feed":ALPACA_OPTIONS_FEED,"contracts":[]}
+        snaps=(r.json().get("snapshots") or {})
+    except Exception as e:
+        return {"symbol":symbol,"status":"UNAVAILABLE","reason":f"Error options data: {e}","feed":ALPACA_OPTIONS_FEED,"contracts":[]}
+    rows=[]
+    for cs,snap in snaps.items():
+        meta=_occ_parts(cs); q=snap.get("latestQuote") or snap.get("latest_quote") or {}
+        bid=float(q.get("bp") or q.get("bid_price") or 0); ask=float(q.get("ap") or q.get("ask_price") or 0)
+        if bid<=0 or ask<=0 or ask<bid: continue
+        mid=(bid+ask)/2; spread_pct=(ask-bid)/mid*100 if mid else 999
+        if spread_pct>35: continue
+        g=snap.get("greeks") or {}; delta=g.get("delta")
+        try: delta=float(delta)
+        except: delta=None
+        bar=snap.get("dailyBar") or snap.get("daily_bar") or {}; volume=float(bar.get("v") or bar.get("volume") or 0)
+        dte=meta.get("dte") if meta else None
+        # Quality score: tighter spread, usable delta, some activity, reasonable DTE. Not win probability.
+        score=100.0
+        score-=min(60.0, spread_pct*2.5)
+        if delta is not None:
+            score-=min(22.0, abs(abs(delta)-0.45)*55)
+        else:
+            score-=12
+        score+=min(10.0, math.log10(volume+1)*2.5)
+        if dte is not None:
+            score+=max(0,8-abs(dte-10)*0.45)
+        score=max(0,min(100,score))
+        rows.append({"contract":cs,"type":meta.get("type") if meta else None,"strike":meta.get("strike") if meta else None,
+                     "expiration":meta.get("expiration") if meta else None,"dte":dte,"bid":round(bid,2),"ask":round(ask,2),
+                     "mid":round(mid,2),"spread_pct":round(spread_pct,1),"delta":round(delta,3) if delta is not None else None,
+                     "iv":round(float(snap.get("impliedVolatility") or snap.get("implied_volatility") or 0),4) or None,
+                     "volume":int(volume),"quality_score":round(score,1)})
+    rows.sort(key=lambda x:(x["quality_score"],x["volume"]),reverse=True)
+    rows=rows[:max(1,min(int(limit),12))]
+    return {"symbol":symbol,"underlying_price":round(underlying,2),"status":"OK" if rows else "NO_DATA",
+            "feed":ALPACA_OPTIONS_FEED,"feed_note":"indicative puede ser retrasado/modificado" if ALPACA_OPTIONS_FEED=="indicative" else "OPRA según suscripción",
+            "ranking_note":"quality_score mide calidad relativa (spread/delta/actividad/DTE), no probabilidad de ganar.","contracts":rows}
+
+@app.get("/api/options/opportunities")
+def options_opportunities(symbol:str="", side:str="auto", limit:int=6):
+    if not symbol:
+        ms=market_selector(); stocks=sorted(ms.get("stocks") or [], key=lambda x:x.get("score",0), reverse=True)
+        symbol=stocks[0]["symbol"] if stocks else ""
+    return option_opportunity_scan(symbol,side,limit)
 
 @app.get("/api/paper/account")
 @app.get("/api/paper/options/account")

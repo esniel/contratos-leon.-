@@ -35,3 +35,11 @@ No guardar API keys en GitHub. Todo lo nuevo arranca en PAPER/SHADOW. `Consensus
 - El Robot ya no cambia silenciosamente el gráfico elegido por el usuario.
 - Data Health distingue MARKET CLOSED de caída real del feed de acciones.
 - UI rehecha tipo terminal/TradingView, con gráfico protagonista y panel Robot lateral.
+
+
+## v57 Auto Scanner
+- No fixed NVDA startup.
+- AUTO mode selects the highest-quality current opportunity from /api/market-selector.
+- Scanner refreshes in place; manual symbol selection temporarily stops auto-follow.
+- New /api/options/opportunities ranks real Alpaca option snapshots by quote quality, delta fit, activity and DTE. The score is not probability of profit.
+- PAPER/SHADOW only; live trading remains blocked.
