@@ -12,7 +12,7 @@ except ImportError:
     websockets = None
 
 BASE = Path(__file__).resolve().parent
-VERSION = "57.0"
+VERSION = "57.1"
 NY = ZoneInfo("America/New_York")
 M7 = ["AAPL","MSFT","GOOGL","AMZN","NVDA","META","TSLA"]
 CRYPTO = ["BTC/USD","ETH/USD","SOL/USD","XRP/USD"]
@@ -39,8 +39,17 @@ HEALTH = {k:{"last_ok":None,"last_data":None,"latency_ms":None,"error":None}
 ALERTS=[]
 DECISIONS=[]
 PAPER={"starting_cash":10000.0,"cash":10000.0,"realized":0.0,"positions":[],"trades":[],"daily_loss_limit_pct":3.0,"max_position_pct":10.0}
-ROBOT={"enabled":True,"mode":"PAPER","state":"ESPERANDO","market":"AUTO","selected_market":"NO TRADE",
-       "symbol":None,"reason":"Esperando datos confiables","updated_at":None,"profit_lock_stage":0}
+ROBOT={"enabled":True,"mode":"PAPER","state":"WAIT","market":"AUTO","selected_market":"NO TRADE",
+       "symbol":None,"reason":"Esperando datos confiables","updated_at":None,"profit_lock_stage":0,
+       "cycles":0,"last_cycle_at":None,"last_cycle_secs":None,"last_decision":None}
+
+# --- Robot automático: configuración (todo por variables de entorno) ---
+ROBOT_INTERVAL_SEC=max(30,int(os.getenv("ROBOT_INTERVAL_SEC","180")))
+CONSENSUS_MIN_SCORE=int(os.getenv("CONSENSUS_MIN_SCORE","70"))
+MAX_OPEN_POSITIONS=max(1,int(os.getenv("MAX_OPEN_POSITIONS","1")))
+RISK_PER_TRADE_PCT=float(os.getenv("RISK_PER_TRADE_PCT","1.0"))
+TRAIL_PCT=float(os.getenv("TRAIL_PCT","1.5"))/100.0
+TIME_EXIT_MIN=int(os.getenv("TIME_EXIT_MIN","120"))
 
 def now(): return time.time()
 def headers(): return {"APCA-API-KEY-ID":ALPACA_KEY,"APCA-API-SECRET-KEY":ALPACA_SECRET}
@@ -162,8 +171,14 @@ async def ws_crypto():
 
 @app.on_event("startup")
 async def startup():
+    global _robot_loop_started
     if ALPACA_KEY and ALPACA_SECRET:
         asyncio.create_task(ws_stocks()); asyncio.create_task(ws_crypto())
+    # El robot automático corre mientras el proceso viva (PAPER/SHADOW).
+    # En Render Free el proceso puede dormir: no se afirma autonomía 24/7.
+    if not _robot_loop_started:
+        _robot_loop_started=True
+        asyncio.create_task(_robot_loop())
 
 @app.api_route("/",methods=["GET","HEAD"],include_in_schema=False)
 def home():
@@ -224,6 +239,21 @@ def technical_score(candles):
     return {"score":max(0,min(100,round(score))),"trend":trend,"rsi":round(rsi,1),
             "support":round(min(lows),4),"resistance":round(max(highs),4)}
 
+def _fetch_candles(symbol, interval="15min", outputsize=120):
+    """Velas vía Twelve Data. Devuelve None si no hay proveedor; lanza 502 si el proveedor falla."""
+    if not TD_KEY:
+        return None
+    r=requests.get("https://api.twelvedata.com/time_series",
+        params={"symbol":symbol,"interval":interval,"outputsize":min(max(outputsize,30),500),"apikey":TD_KEY},timeout=15)
+    d=r.json()
+    if d.get("status")=="error":
+        raise HTTPException(502,d.get("message","Twelve Data error"))
+    vals=list(reversed(d.get("values",[])))
+    candles=[{"time":v["datetime"],"open":float(v["open"]),"high":float(v["high"]),"low":float(v["low"]),
+              "close":float(v["close"]),"volume":float(v.get("volume") or 0)} for v in vals]
+    record("twelvedata",True)
+    return candles
+
 def risk_shield(symbol, q=None, score=50):
     q=q or quote(symbol); gates=[]; blocked=False
     bid=float(q.get("bid") or 0); ask=float(q.get("ask") or 0); price=float(q.get("price") or 0)
@@ -265,8 +295,9 @@ def market_selector():
     if stock_allowed and (not crypto_allowed or bs["score"]>=bc["score"]): selected="ACCIONES"; best=bs
     elif crypto_allowed: selected="CRIPTO"; best=bc
     else: selected="NO TRADE"; best=None
+    # El loop del robot es dueño del estado; el selector solo informa mercado/símbolo.
+    # No pisa ACTIVE/PROFIT LOCK/EXIT mientras hay posiciones abiertas.
     ROBOT.update({"selected_market":selected,"symbol":best["symbol"] if best else None,
-                  "state":"ESCANEANDO" if selected!="NO TRADE" else "ESPERANDO",
                   "reason":"Selección objetiva por frescura/spread/sesión; no es garantía de beneficio.","updated_at":now()})
     return {"selected_market":selected,"best":best,"stocks":stocks,"crypto":cryptos,"robot":ROBOT}
 
@@ -424,20 +455,12 @@ def analysis(symbol:str="NVDA", interval:str="5min", outputsize:int=120):
     if symbol not in M7+CRYPTO:
         raise HTTPException(400,"Símbolo fuera del universo LEONIX v52.1")
     q=quote(symbol)
-    if not TD_KEY:
+    candles=_fetch_candles(symbol,interval,outputsize)
+    if candles is None:
         return {"symbol":symbol,"quote":q,"candles":[],"technical":{"score":50,"trend":"NEUTRAL","rsi":None,
                 "support":None,"resistance":None},"risk":risk_shield(symbol,q=q,score=50),
                 "sync_ok":True,"warning":"Sin TWELVE_DATA_API_KEY: niveles no disponibles"}
-    r=requests.get("https://api.twelvedata.com/time_series",
-        params={"symbol":symbol,"interval":interval,"outputsize":min(max(outputsize,30),500),"apikey":TD_KEY},timeout=15)
-    d=r.json()
-    if d.get("status")=="error":
-        raise HTTPException(502,d.get("message","Twelve Data error"))
-    vals=list(reversed(d.get("values",[])))
-    candles=[{"time":v["datetime"],"open":float(v["open"]),"high":float(v["high"]),"low":float(v["low"]),
-              "close":float(v["close"]),"volume":float(v.get("volume") or 0)} for v in vals]
     tech=technical_score(candles)
-    record("twelvedata",True)
     risk=risk_shield(symbol,q=q,score=tech["score"])
     # Sanity check: quote must be in a plausible envelope around recent candles.
     sync_ok=True
@@ -469,3 +492,266 @@ def data_health_ui():
 def system():
     return {"version":VERSION,"mode":"PAPER/SHADOW","live_trading":False,"kill_switch":True,
             "markets":["ACCIONES","CRIPTO"],"stocks":M7,"crypto":CRYPTO}
+
+# =====================================================================
+# ROBOT AUTOMÁTICO — loop: DATOS -> SCANNER -> ANÁLISIS -> CONSENSUS ->
+# RISK SHIELD -> PAPER TRADE -> ADAPTIVE MANAGER -> JOURNAL -> MÉTRICAS
+# PAPER/SHADOW únicamente. Live trading bloqueado. Si no hay una
+# oportunidad suficientemente buena: WAIT / NO TRADE.
+# =====================================================================
+
+def _journal(decision, symbol, reason):
+    entry={"at":now(),"at_et":datetime.now(NY).isoformat(timespec="seconds"),
+           "decision":decision,"symbol":symbol,"reason":str(reason)[:220]}
+    DECISIONS.insert(0,entry); del DECISIONS[200:]
+    ROBOT["last_decision"]={"decision":decision,"symbol":symbol,
+                            "reason":str(reason)[:220],"at":now()}
+
+def _today_et():
+    return datetime.now(NY).date().isoformat()
+
+def _daily_realized():
+    today=_today_et(); total=0.0
+    for t in PAPER["trades"]:
+        if t.get("event")=="EXIT" and t.get("closed_at"):
+            try:
+                d=datetime.fromtimestamp(t["closed_at"],tz=NY).date().isoformat()
+            except Exception:
+                continue
+            if d==today:
+                total+=float(t.get("pnl") or 0)
+    return round(total,2)
+
+def _daily_loss_hit():
+    limit=PAPER["starting_cash"]*(PAPER["daily_loss_limit_pct"]/100.0)
+    return _daily_realized()<=-limit
+
+def _equity_now():
+    return PAPER["cash"]+sum(float(p.get("market_value",p.get("entry_cost",0))) for p in PAPER["positions"])
+
+def _paper_spot_open(symbol, q, tech, risk):
+    """Abre posición PAPER sobre el subyacente (solo LONG en v1). Devuelve la posición o None."""
+    price=float(q.get("price") or 0)
+    if price<=0:
+        _journal("WAIT",symbol,"Precio inválido: sin entrada"); return None
+    if tech.get("trend")!="BULL":
+        _journal("WAIT",symbol,f"Tendencia {tech.get('trend')}: v1 solo opera LONG"); return None
+    support=tech.get("support")
+    structural=support and support<price
+    stop=round(float(support),4) if structural else round(price*0.99,4)
+    risk_per_share=price-stop
+    if risk_per_share<=0:
+        _journal("WAIT",symbol,"Stop inválido: sin entrada"); return None
+    equity=_equity_now()
+    risk_amount=equity*(RISK_PER_TRADE_PCT/100.0)
+    qty=risk_amount/risk_per_share
+    qty=min(qty,(equity*(PAPER["max_position_pct"]/100.0))/price)
+    qty=round(qty,6) if "/" in symbol else math.floor(qty)
+    if qty<=0:
+        _journal("WAIT",symbol,"Sizing da 0 unidades: sin entrada"); return None
+    cost=round(qty*price,2)
+    if cost>equity*(PAPER["max_position_pct"]/100.0):
+        _journal("WAIT",symbol,"Risk Shield: posición >10% del equity"); return None
+    if cost>PAPER["cash"]:
+        _journal("WAIT",symbol,"Cash insuficiente"); return None
+    pos={"position_id":f"S{int(now()*1000)}","kind":"SPOT","symbol":symbol,"side":"LONG",
+         "qty":qty,"entry_price":round(price,4),"entry_cost":cost,
+         "stop":stop,"initial_stop":stop,
+         "tp1":round(price+1.5*risk_per_share,4),"tp2":round(price+2.5*risk_per_share,4),
+         "tp3":round(price+4.0*risk_per_share,4),
+         "highest":round(price,4),"profit_lock_stage":0,"opened_at":now(),
+         "state":"ACTIVE","market_value":cost,"unrealized":0.0,
+         "tech_score":tech.get("score"),"risk_status":risk.get("status"),
+         "basis":"soporte estructural" if structural else "stop 1% (fallback)"}
+    PAPER["cash"]=round(PAPER["cash"]-cost,2)
+    PAPER["positions"].append(pos)
+    PAPER["trades"].append({"event":"PAPER ENTRY","kind":"SPOT","position_id":pos["position_id"],
+                            "symbol":symbol,"side":"LONG","qty":qty,"entry_price":pos["entry_price"],
+                            "entry_cost":cost,"stop":stop,"tp1":pos["tp1"],"tp2":pos["tp2"],"tp3":pos["tp3"],
+                            "tech_score":tech.get("score"),"risk_status":risk.get("status"),
+                            "basis":pos["basis"],"opened_at":pos["opened_at"]})
+    return pos
+
+def _paper_spot_close(pos, price, reason):
+    price=float(price)
+    proceeds=round(pos["qty"]*price,2)
+    pnl=round(proceeds-pos["entry_cost"],2)
+    PAPER["cash"]=round(PAPER["cash"]+proceeds,2)
+    PAPER["realized"]=round(PAPER["realized"]+pnl,2)
+    try: PAPER["positions"].remove(pos)
+    except ValueError: pass
+    PAPER["trades"].append({"event":"EXIT","kind":"SPOT","position_id":pos["position_id"],
+                            "symbol":pos["symbol"],"side":pos["side"],"qty":pos["qty"],
+                            "entry_price":pos["entry_price"],"exit_price":round(price,4),
+                            "pnl":pnl,"reason":reason,"closed_at":now(),
+                            "duration_min":round((now()-pos["opened_at"])/60,1)})
+    _journal("EXIT",pos["symbol"],f"{reason} · P/L ${pnl:+.2f}")
+    return pnl
+
+def _manage_positions():
+    """Adaptive Trade Manager: stop, profit lock, trailing, TP3 y time exit. Devuelve True si cerró algo."""
+    closed_any=False
+    for pos in list(PAPER["positions"]):
+        if pos.get("kind","OPTION")!="SPOT" or pos.get("state") not in ("ACTIVE","PROFIT LOCK","STALE"):
+            continue
+        symbol=pos["symbol"]
+        try:
+            q=quote(symbol)
+        except Exception as e:
+            pos["state"]="STALE"; _journal("WAIT",symbol,f"Sin quote para gestionar: {e}"); continue
+        price=float(q.get("price") or 0)
+        age=now()-(q.get("market_time") or q.get("received_at") or 0)
+        if price<=0 or age>90:
+            pos["state"]="STALE"; _journal("WAIT",symbol,"Dato viejo: gestión pausada, no se opera a ciegas"); continue
+        if pos.get("state")=="STALE":
+            pos["state"]="PROFIT LOCK" if pos.get("profit_lock_stage",0)>0 else "ACTIVE"
+        pos["highest"]=max(pos.get("highest",price),price)
+        pos["market_value"]=round(pos["qty"]*price,2)
+        pos["unrealized"]=round(pos["market_value"]-pos["entry_cost"],2)
+        if price<=pos["stop"]:
+            _paper_spot_close(pos,price,"STOP alcanzado"); closed_any=True; continue
+        stage=pos.get("profit_lock_stage",0)
+        if stage==0 and price>=pos["tp1"]:
+            pos["stop"]=max(pos["stop"],pos["entry_price"]); pos["profit_lock_stage"]=1; pos["state"]="PROFIT LOCK"
+            _journal("PROFIT LOCK",symbol,f"TP1 alcanzado: stop a breakeven ${pos['stop']:.4f}")
+        elif stage>=1:
+            trail=round(pos["highest"]*(1-TRAIL_PCT),4)
+            if trail>pos["stop"]:
+                pos["stop"]=trail; pos["profit_lock_stage"]=2; pos["state"]="PROFIT LOCK"
+                _journal("PROFIT LOCK",symbol,f"Trailing stop en ${pos['stop']:.4f}")
+        if price>=pos["tp3"]:
+            _paper_spot_close(pos,price,"TP3 alcanzado"); closed_any=True; continue
+        if now()-pos["opened_at"]>TIME_EXIT_MIN*60:
+            _paper_spot_close(pos,price,f"TIME EXIT ({TIME_EXIT_MIN} min)"); closed_any=True; continue
+    return closed_any
+
+_cycle_running=False
+
+async def robot_cycle():
+    """Un ciclo completo del robot. Nunca revienta: todo fallo queda en el journal."""
+    global _cycle_running
+    if _cycle_running:
+        return
+    _cycle_running=True
+    t0=now()
+    try:
+        ROBOT["cycles"]=ROBOT.get("cycles",0)+1
+        if not ROBOT.get("enabled",True):
+            ROBOT.update({"state":"PAUSED","reason":"Robot pausado por el usuario","updated_at":now()})
+            _journal("WAIT",None,"Robot pausado"); return
+        # 1) Gestionar posiciones abiertas
+        closed_any=_manage_positions()
+        open_spots=[p for p in PAPER["positions"]
+                    if p.get("kind","OPTION")=="SPOT" and p.get("state") in ("ACTIVE","PROFIT LOCK","STALE")]
+        if open_spots:
+            locked=any(p.get("profit_lock_stage",0)>0 for p in open_spots)
+            ROBOT.update({"state":"PROFIT LOCK" if locked else "ACTIVE","symbol":open_spots[0]["symbol"],
+                          "reason":"Gestionando posición paper abierta","updated_at":now()})
+            if len(open_spots)>=MAX_OPEN_POSITIONS:
+                _journal("WAIT",open_spots[0]["symbol"],"Posición en gestión; sin nuevas entradas"); return
+        if closed_any:
+            ROBOT.update({"state":"EXIT","reason":"Posición cerrada; reevaluando próximo ciclo","updated_at":now()})
+            _journal("WAIT",None,"Cierre ejecutado este ciclo; próxima evaluación en el siguiente"); return
+        # 2) Límite de pérdida diaria
+        if _daily_loss_hit():
+            ROBOT.update({"state":"BLOCKED","selected_market":"NO TRADE","symbol":None,
+                          "reason":f"Límite de pérdida diaria alcanzado ({PAPER['daily_loss_limit_pct']}%)",
+                          "updated_at":now()})
+            _journal("NO TRADE",None,"Risk Shield: límite de pérdida diaria"); return
+        # 3) Scanner
+        ms=market_selector()
+        if ms["selected_market"]=="NO TRADE" or not ms.get("best"):
+            ROBOT.update({"state":"WAIT","reason":"Sin oportunidades con datos suficientes","updated_at":now()})
+            _journal("WAIT",None,"Scanner: NO TRADE"); return
+        symbol=ms["best"]["symbol"]
+        # 4) Análisis técnico (requiere velas reales)
+        try:
+            candles=_fetch_candles(symbol,"15min",120)
+        except Exception:
+            candles=None
+        if not candles or len(candles)<30:
+            ROBOT.update({"state":"WAIT","symbol":symbol,
+                          "reason":"Sin velas suficientes para análisis técnico","updated_at":now()})
+            _journal("WAIT",symbol,"Sin datos técnicos suficientes: NO TRADE"); return
+        tech=technical_score(candles)
+        # 5) Consensus
+        if tech["trend"]!="BULL" or tech["score"]<CONSENSUS_MIN_SCORE:
+            ROBOT.update({"state":"WAIT","symbol":symbol,
+                          "reason":f"Sin consenso: tendencia {tech['trend']}, score {tech['score']}",
+                          "updated_at":now()})
+            _journal("WAIT",symbol,f"Score {tech['score']}/umbral {CONSENSUS_MIN_SCORE}, tendencia {tech['trend']}"); return
+        # 6) Risk Shield
+        try:
+            q=quote(symbol)
+        except Exception as e:
+            ROBOT.update({"state":"WAIT","symbol":symbol,
+                          "reason":f"Sin quote confiable: {e}","updated_at":now()})
+            _journal("NO TRADE",symbol,f"Sin precio confiable: {e}"); return
+        risk=risk_shield(symbol,q=q,score=tech["score"])
+        if risk["blocked"] or risk["status"]!="GREEN":
+            bad=[g["name"] for g in risk["gates"] if g["status"]!="GREEN"]
+            ROBOT.update({"state":"WAIT","symbol":symbol,
+                          "reason":"Risk Shield "+risk["status"]+": "+",".join(bad),"updated_at":now()})
+            _journal("NO TRADE" if risk["blocked"] else "WAIT",symbol,f"Risk Shield {risk['status']}: {','.join(bad)}"); return
+        # 7) ARMED -> entrada PAPER
+        ROBOT.update({"state":"ARMED","symbol":symbol,
+                      "reason":f"Señal armada: score {tech['score']}, Risk Shield GREEN","updated_at":now()})
+        _journal("ARMED",symbol,f"Score {tech['score']} + Risk Shield GREEN: activando PAPER")
+        pos=_paper_spot_open(symbol,q,tech,risk)
+        if pos:
+            ROBOT.update({"state":"ACTIVE","symbol":symbol,
+                          "reason":f"PAPER ENTRY: {pos['qty']} x {symbol} @ ${pos['entry_price']}",
+                          "updated_at":now()})
+            _journal("ACTIVE",symbol,f"PAPER ENTRY {pos['qty']} @ ${pos['entry_price']} · stop ${pos['stop']}")
+        else:
+            ROBOT.update({"state":"WAIT","symbol":symbol,
+                          "reason":"No se pudo dimensionar la posición","updated_at":now()})
+    except Exception as e:
+        _journal("ERROR",None,str(e)[:200])
+        ROBOT.update({"reason":f"Error en ciclo: {str(e)[:120]}","updated_at":now()})
+    finally:
+        ROBOT["last_cycle_at"]=now()
+        ROBOT["last_cycle_secs"]=round(now()-t0,2)
+        _cycle_running=False
+
+_robot_loop_started=False
+
+async def _robot_loop():
+    """Tarea de fondo: ejecuta robot_cycle cada ROBOT_INTERVAL_SEC mientras el proceso viva."""
+    await asyncio.sleep(10)
+    while True:
+        try:
+            await robot_cycle()
+        except Exception as e:
+            _journal("ERROR",None,f"loop: {e}"[:200])
+        await asyncio.sleep(max(30,ROBOT_INTERVAL_SEC))
+
+@app.get("/api/robot/decisions")
+def robot_decisions(limit:int=30):
+    return {"decisions":DECISIONS[:max(1,min(limit,200))],"cycles":ROBOT.get("cycles",0),
+            "interval_sec":ROBOT_INTERVAL_SEC,"paper_only":True}
+
+@app.get("/api/metrics")
+def metrics():
+    closed=[t for t in PAPER["trades"]
+            if t.get("event")=="EXIT" and isinstance(t.get("pnl"),(int,float))]
+    n=len(closed)
+    base={"sample_size":n,"paper":True,
+          "note":"Métricas paper. El score interno nunca es probabilidad de ganar."}
+    if n==0:
+        return {**base,"detail":"Sin operaciones cerradas todavía. Las métricas necesitan muestra."}
+    wins=[t for t in closed if t["pnl"]>0]; losses=[t for t in closed if t["pnl"]<=0]
+    gross_win=sum(t["pnl"] for t in wins); gross_loss=-sum(t["pnl"] for t in losses)
+    eq=PAPER["starting_cash"]; peak=eq; mdd=0.0
+    for t in closed:
+        eq+=t["pnl"]; peak=max(peak,eq); mdd=max(mdd,peak-eq)
+    return {**base,
+            "win_rate":round(len(wins)/n*100,1),
+            "profit_factor":round(gross_win/gross_loss,2) if gross_loss>0 else None,
+            "expectancy":round(sum(t["pnl"] for t in closed)/n,2),
+            "avg_win":round(gross_win/len(wins),2) if wins else 0,
+            "avg_loss":round(-gross_loss/len(losses),2) if losses else 0,
+            "max_drawdown":round(mdd,2),
+            "realized":round(PAPER["realized"],2),
+            "daily_realized":_daily_realized(),
+            "daily_loss_limit_pct":PAPER["daily_loss_limit_pct"]}
