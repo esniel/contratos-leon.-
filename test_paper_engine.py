@@ -241,7 +241,7 @@ epoch = L.parse_ts("2026-09-10T14:23:01.123456789Z")
 check("parse_ts parsea timestamps con nanosegundos de Alpaca", epoch is not None and epoch > 0)
 check("parse_ts devuelve None con basura en vez de reventar", L.parse_ts("no-es-fecha") is None)
 
-check("health() reporta la versión real 57.0", L.health()["version"] == "57.1")
+check("health() reporta la versión real 57.2", L.health()["version"] == "57.2")
 
 # Sin API keys, el selector no inventa oportunidades: NO TRADE
 ms = L.market_selector()

@@ -46,6 +46,20 @@ Sin dependencias (usa stubs): `python3 test_paper_engine.py`.
 - New /api/options/opportunities ranks real Alpaca option snapshots by quote quality, delta fit, activity and DTE. The score is not probability of profit.
 - PAPER/SHADOW only; live trading remains blocked.
 
+## v57.2 Terminal Pro (rediseño del frontend)
+
+- Solo presentación: el backend y el loop del robot no cambian.
+- Nueva interfaz estilo terminal profesional, oscura y densa pero legible en móvil.
+- Franja fija de estado del robot: estado · símbolo/dirección · tiempo de sesión · nivel de riesgo · P/L no realizado.
+- Gráfico de velas protagonista con EMA20/EMA50 calculadas en cliente y barras de volumen; insignia SYNC/DESYNC visible.
+- Paneles RSI(14) y MACD(12,26,9) calculados en cliente desde las velas reales.
+- Ranking de oportunidades con quality score y nota de señal honesta (ej. "Señal: Fuerte · spread 0.08%").
+- Risk Shield detallado: límite de pérdida diaria, stop automático, exposición y gates.
+- Cuenta paper: equity, disponible, P/L del día, winrate y drawdown (vía /api/metrics).
+- Notas del bot con la última decisión en lenguaje claro + diario completo en modal.
+- Navegación inferior: Inicio, Señales, Portafolio, Riesgo, Perfil — todo funcional, ningún botón decorativo.
+- El quality score sigue declarado como calidad técnica relativa: no es probabilidad de ganar.
+
 ## v57.1 Robot automático (loop completo)
 
 El robot ejecuta en segundo plano, cada `ROBOT_INTERVAL_SEC` segundos, el ciclo completo:
